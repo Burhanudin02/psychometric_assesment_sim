@@ -1,6 +1,9 @@
 #!/bin/sh
 set -e
 
+echo "[Entrypoint] Ensuring upload directories exist..."
+mkdir -p /app/public/uploads/questions
+
 echo "[Entrypoint] Waiting for PostgreSQL to be available at db:5432..."
 until nc -z db 5432; do
   sleep 1

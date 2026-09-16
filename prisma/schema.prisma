@@ -55,15 +55,67 @@ enum ErrorCategory {
   NONE
 }
 
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum QualityStatus {
+  DRAFT
+  ACTIVE
+  REVIEW_REQUIRED
+  DEPRECATED
+}
+
+enum ReportReason {
+  AMBIGUOUS_MULTIPLE_ANSWERS
+  IMAGE_UNCLEAR
+  INCORRECT_ANSWER_KEY
+  QUESTION_INCOMPLETE
+  TYPO_FORMATTING
+  BROKEN_IMAGE
+  OTHER
+}
+
+enum ReportStatus {
+  OPEN
+  IN_REVIEW
+  RESOLVED
+  DISMISSED
+  DUPLICATE
+}
+
+enum ImagePosition {
+  ABOVE_QUESTION
+  BELOW_QUESTION
+  INLINE
+}
+
 model User {
   id             String              @id @default(uuid())
+  email          String?             @unique
+  username       String?             @unique
+  passwordHash   String?
+  role           UserRole            @default(USER)
+  status         UserStatus          @default(ACTIVE)
   anonymousToken String              @unique
   displayName    String?             @default("Candidate")
   createdAt      DateTime            @default(now())
   updatedAt      DateTime            @updatedAt
+  lastLoginAt    DateTime?
+
   sessions       AssessmentSession[]
+  reports        QuestionReport[]
+  versions       QuestionVersion[]
 
   @@index([anonymousToken])
+  @@index([email])
+  @@index([role, status])
 }
 
 model AssessmentSession {
@@ -116,9 +168,16 @@ model Question {
   subtopic            String
   questionType        QuestionType
   difficulty          Difficulty        @default(MODERATE)
+  qualityStatus       QualityStatus     @default(ACTIVE)
+  reportCount         Int               @default(0)
+  lastReviewedAt      DateTime?
+  lastReviewedBy      String?
+  reviewNote          String?           @db.Text
   prompt              String            @db.Text
   svgData             String?           @db.Text // Embedded SVG markup for figural/spatial items
-  options             Json              // Array of { id: "A"|"B"|"C"|"D", text?: string, svg?: string }
+  image               String?           // Main question image URL or path
+  imagePosition       ImagePosition     @default(ABOVE_QUESTION)
+  options             Json              // Array of { id: "A"|"B"|"C"|"D", text?: string, svg?: string, image?: string }
   correctAnswer       String            // "A", "B", "C", "D" or exact numerical string
   explanation         String            @db.Text
   solvingStrategy     String            @db.Text
@@ -131,26 +190,86 @@ model Question {
   metadata            Json?
 
   attempts            QuestionAttempt[]
+  images              QuestionImage[]
+  reports             QuestionReport[]
+  versions            QuestionVersion[]
 
   @@index([domain, subtopic, difficulty])
-  @@index([active])
+  @@index([active, qualityStatus])
+}
+
+model QuestionImage {
+  id               String        @id @default(uuid())
+  questionId       String
+  question         Question      @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  optionId         String?       // "A", "B", "C", "D" if image is for an option
+  storagePath      String
+  url              String
+  originalFilename String
+  mimeType         String
+  size             Int
+  width            Int?
+  height           Int?
+  altText          String?
+  caption          String?
+  position         ImagePosition @default(ABOVE_QUESTION)
+  createdAt        DateTime      @default(now())
+
+  @@index([questionId])
+}
+
+model QuestionReport {
+  id              String       @id @default(uuid())
+  questionId      String
+  question        Question     @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  questionVersion Int          @default(1)
+  userId          String
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionId       String?
+  reason          ReportReason
+  comment         String?      @db.Text
+  status          ReportStatus @default(OPEN)
+  createdAt       DateTime     @default(now())
+  reviewedAt      DateTime?
+  reviewedBy      String?
+  adminNote       String?      @db.Text
+
+  @@index([questionId, status])
+  @@index([userId])
+  @@index([status])
+}
+
+model QuestionVersion {
+  id           String    @id @default(uuid())
+  questionId   String
+  question     Question  @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  version      Int
+  questionData Json      // Snapshot of prompt, images, options, correctAnswer, explanation, strategy
+  changedBy    String?
+  user         User?     @relation(fields: [changedBy], references: [id], onDelete: SetNull)
+  changedAt    DateTime  @default(now())
+  changeReason String?   @db.Text
+
+  @@unique([questionId, version])
+  @@index([questionId])
 }
 
 model QuestionAttempt {
-  id             String            @id @default(uuid())
-  sessionId      String
-  session        AssessmentSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  moduleId       String
-  module         AssessmentModule  @relation(fields: [moduleId], references: [id], onDelete: Cascade)
-  questionId     String
-  question       Question          @relation(fields: [questionId], references: [id], onDelete: Restrict)
-  selectedAnswer String?           // Selected option or null if unanswered
-  isCorrect      Boolean           @default(false)
-  isAnswered     Boolean           @default(false)
-  responseTimeMs Int               @default(0)
-  submittedAt    DateTime          @default(now())
-  isTimedOut     Boolean           @default(false)
-  errorCategory  ErrorCategory     @default(NONE)
+  id              String            @id @default(uuid())
+  sessionId       String
+  session         AssessmentSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  moduleId        String
+  module          AssessmentModule  @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  questionId      String
+  question        Question          @relation(fields: [questionId], references: [id], onDelete: Restrict)
+  questionVersion Int               @default(1)
+  selectedAnswer  String?           // Selected option or null if unanswered
+  isCorrect       Boolean           @default(false)
+  isAnswered      Boolean           @default(false)
+  responseTimeMs  Int               @default(0)
+  submittedAt     DateTime          @default(now())
+  isTimedOut      Boolean           @default(false)
+  errorCategory   ErrorCategory     @default(NONE)
 
   @@index([sessionId, moduleId])
   @@index([questionId])

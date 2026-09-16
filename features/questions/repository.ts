@@ -3,11 +3,18 @@ import { QuestionItem } from "./types";
 import seedData from "@/data/seedQuestions.json";
 import { getModuleConfig } from "@/lib/curriculum";
 
-export async function getAllQuestions(): Promise<QuestionItem[]> {
+export async function getAllQuestions(includeNonActive = false): Promise<QuestionItem[]> {
   try {
     const dbQuestions = await prisma.question.findMany({
-      where: { active: true },
+      where: includeNonActive
+        ? undefined
+        : {
+            active: true,
+            qualityStatus: "ACTIVE",
+          },
+      orderBy: { id: "asc" },
     });
+
     if (dbQuestions && dbQuestions.length > 0) {
       return dbQuestions.map((q) => ({
         id: q.id,
@@ -15,8 +22,11 @@ export async function getAllQuestions(): Promise<QuestionItem[]> {
         subtopic: q.subtopic,
         questionType: q.questionType as any,
         difficulty: q.difficulty as any,
+        qualityStatus: q.qualityStatus as any,
         prompt: q.prompt,
         svgData: q.svgData,
+        image: q.image,
+        imagePosition: q.imagePosition as any,
         options: q.options as any,
         correctAnswer: q.correctAnswer,
         explanation: q.explanation,
@@ -27,13 +37,21 @@ export async function getAllQuestions(): Promise<QuestionItem[]> {
         generatorSeed: q.generatorSeed,
         active: q.active,
         version: q.version,
+        reportCount: q.reportCount,
+        lastReviewedAt: q.lastReviewedAt?.toISOString() || null,
+        lastReviewedBy: q.lastReviewedBy,
+        reviewNote: q.reviewNote,
+        metadata: q.metadata as any,
       }));
     }
   } catch (err) {
     console.warn("Falling back to local seedQuestions.json:", err);
   }
 
-  return seedData as QuestionItem[];
+  return (seedData as any[]).map((q) => ({
+    ...q,
+    qualityStatus: q.qualityStatus || "ACTIVE",
+  })) as QuestionItem[];
 }
 
 export async function getQuestionById(id: string): Promise<QuestionItem | null> {
@@ -48,8 +66,11 @@ export async function getQuestionById(id: string): Promise<QuestionItem | null> 
         subtopic: dbQ.subtopic,
         questionType: dbQ.questionType as any,
         difficulty: dbQ.difficulty as any,
+        qualityStatus: dbQ.qualityStatus as any,
         prompt: dbQ.prompt,
         svgData: dbQ.svgData,
+        image: dbQ.image,
+        imagePosition: dbQ.imagePosition as any,
         options: dbQ.options as any,
         correctAnswer: dbQ.correctAnswer,
         explanation: dbQ.explanation,
@@ -60,6 +81,11 @@ export async function getQuestionById(id: string): Promise<QuestionItem | null> 
         generatorSeed: dbQ.generatorSeed,
         active: dbQ.active,
         version: dbQ.version,
+        reportCount: dbQ.reportCount,
+        lastReviewedAt: dbQ.lastReviewedAt?.toISOString() || null,
+        lastReviewedBy: dbQ.lastReviewedBy,
+        reviewNote: dbQ.reviewNote,
+        metadata: dbQ.metadata as any,
       };
     }
   } catch (e) {
@@ -75,7 +101,8 @@ export async function getQuestionsForModule(moduleNumber: number, count?: number
   const targetCount = count ?? (config?.defaultItemCount || 8);
   const domain = config?.domain || "NUMERICAL_REASONING";
 
-  const all = await getAllQuestions();
+  // Only ACTIVE questions are served to test candidates
+  const all = await getAllQuestions(false);
   let filtered = all.filter((q) => q.domain === domain);
 
   if (filtered.length === 0) {
@@ -91,9 +118,10 @@ export async function getQuestionsByFilter(params: {
   domain?: string;
   subtopic?: string;
   difficulty?: string;
+  qualityStatus?: string;
   limit?: number;
 }): Promise<QuestionItem[]> {
-  const all = await getAllQuestions();
+  const all = await getAllQuestions(true);
   let filtered = all;
 
   if (params.domain && params.domain !== "ALL") {
@@ -104,6 +132,9 @@ export async function getQuestionsByFilter(params: {
   }
   if (params.difficulty && params.difficulty !== "ALL") {
     filtered = filtered.filter((q) => q.difficulty === params.difficulty);
+  }
+  if (params.qualityStatus && params.qualityStatus !== "ALL") {
+    filtered = filtered.filter((q) => q.qualityStatus === params.qualityStatus);
   }
 
   const limit = params.limit ?? 10;

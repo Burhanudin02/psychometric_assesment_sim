@@ -264,6 +264,7 @@ export default function ActiveSimulationPage() {
                 selectedAnswer={selectedAnswers[q.id] || null}
                 onSelectAnswer={(ansId) => handleSelectAnswer(q.id, ansId)}
                 disabled={isSubmitting}
+                sessionId={sessionId}
               />
             ))}
           </div>

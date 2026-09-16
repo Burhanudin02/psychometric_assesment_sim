@@ -3,6 +3,7 @@
 import React from "react";
 import { TimerAlertLevel } from "@/features/timer/useAssessmentTimer";
 import { Clock } from "lucide-react";
+import { BetaBadge } from "@/components/ui/BetaBadge";
 
 interface AssessmentHeaderProps {
   currentModuleNum: number;
@@ -34,9 +35,12 @@ export function AssessmentHeader({
             CAS
           </div>
           <div>
-            <h1 className="text-sm font-bold text-slate-900 tracking-tight sm:text-base">
-              Cognitive Assessment Simulator
-            </h1>
+            <div className="flex items-center space-x-2">
+              <h1 className="text-sm font-bold text-slate-900 tracking-tight sm:text-base">
+                Cognitive Assessment Simulator
+              </h1>
+              <BetaBadge minimal />
+            </div>
             <p className="text-xs text-slate-500 hidden sm:block">
               Simulasi Pelatihan Kognitif & Kecepatan Berpikir
             </p>

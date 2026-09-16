@@ -15,35 +15,72 @@ import {
   Trash2,
   FileText,
   AlertCircle,
+  Flag,
+  Users,
+  Eye,
+  ImageIcon,
+  ShieldAlert,
+  HelpCircle,
+  BookOpen,
+  CheckCircle2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { BetaBadge } from "@/components/ui/BetaBadge";
 import { DOMAIN_LABELS } from "@/lib/curriculum";
+import { QuestionRenderer } from "@/components/assessment/QuestionRenderer";
+import { QuestionItem } from "@/features/questions/types";
 
 export default function AdminQuestionsPage() {
   const [questions, setQuestions] = useState<any[]>([]);
   const [selectedDomain, setSelectedDomain] = useState<string>("ALL");
+  const [selectedQuality, setSelectedQuality] = useState<string>("ALL");
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // New question form modal
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [newQDomain, setNewQDomain] = useState("NUMERICAL_REASONING");
-  const [newQSubtopic, setNewQSubtopic] = useState("percentages");
-  const [newQDifficulty, setNewQDifficulty] = useState("MODERATE");
-  const [newQPrompt, setNewQPrompt] = useState("");
-  const [newQOptionA, setNewQOptionA] = useState("");
-  const [newQOptionB, setNewQOptionB] = useState("");
-  const [newQOptionC, setNewQOptionC] = useState("");
-  const [newQOptionD, setNewQOptionD] = useState("");
-  const [newQCorrectAnswer, setNewQCorrectAnswer] = useState("A");
-  const [newQExplanation, setNewQExplanation] = useState("");
-  const [newQSolvingStrategy, setNewQSolvingStrategy] = useState("");
+  // Modal states
+  const [showFormModal, setShowFormModal] = useState(false);
+  const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
+  const [changeReason, setChangeReason] = useState("");
+
+  // Form fields
+  const [qDomain, setQDomain] = useState("NUMERICAL_REASONING");
+  const [qSubtopic, setQSubtopic] = useState("percentages");
+  const [qDifficulty, setQDifficulty] = useState("MODERATE");
+  const [qQualityStatus, setQQualityStatus] = useState("ACTIVE");
+  const [qPrompt, setQPrompt] = useState("");
+  const [qImageUrl, setQImageUrl] = useState("");
+  const [qImagePos, setQImagePos] = useState<"ABOVE_QUESTION" | "BELOW_QUESTION" | "INLINE">("ABOVE_QUESTION");
+  const [qSvgData, setQSvgData] = useState("");
+
+  const [qOptionA, setQOptionA] = useState("");
+  const [qOptionAImage, setQOptionAImage] = useState("");
+  const [qOptionB, setQOptionB] = useState("");
+  const [qOptionBImage, setQOptionBImage] = useState("");
+  const [qOptionC, setQOptionC] = useState("");
+  const [qOptionCImage, setQOptionCImage] = useState("");
+  const [qOptionD, setQOptionD] = useState("");
+  const [qOptionDImage, setQOptionDImage] = useState("");
+
+  const [qCorrectAnswer, setQCorrectAnswer] = useState("A");
+  const [qExplanation, setQExplanation] = useState("");
+  const [qSolvingStrategy, setQSolvingStrategy] = useState("");
+
+  // Image uploading states
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+
+  // Dual Preview Modal state
+  const [previewQuestion, setPreviewQuestion] = useState<QuestionItem | null>(null);
+  const [previewMode, setPreviewMode] = useState<"user" | "key">("user");
+  const [previewSelectedAnswer, setPreviewSelectedAnswer] = useState<string | null>(null);
 
   const loadQuestions = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/admin/questions?domain=${selectedDomain}`);
+      const res = await fetch(
+        `/api/admin/questions?domain=${selectedDomain}&qualityStatus=${selectedQuality}`
+      );
       const data = await res.json();
       if (data.success) {
         setQuestions(data.questions || []);
@@ -57,59 +94,177 @@ export default function AdminQuestionsPage() {
 
   useEffect(() => {
     loadQuestions();
-  }, [selectedDomain]);
+  }, [selectedDomain, selectedQuality]);
 
   const handleExportJson = () => {
     window.open("/api/admin/export", "_blank");
   };
 
-  const handleCreateQuestion = async (e: React.FormEvent) => {
+  const handleOpenCreateModal = () => {
+    setEditingQuestionId(null);
+    setChangeReason("");
+    setQDomain("NUMERICAL_REASONING");
+    setQSubtopic("percentages");
+    setQDifficulty("MODERATE");
+    setQQualityStatus("ACTIVE");
+    setQPrompt("");
+    setQImageUrl("");
+    setQImagePos("ABOVE_QUESTION");
+    setQSvgData("");
+    setQOptionA("");
+    setQOptionAImage("");
+    setQOptionB("");
+    setQOptionBImage("");
+    setQOptionC("");
+    setQOptionCImage("");
+    setQOptionD("");
+    setQOptionDImage("");
+    setQCorrectAnswer("A");
+    setQExplanation("");
+    setQSolvingStrategy("");
+    setShowFormModal(true);
+  };
+
+  const handleOpenEditModal = (q: any) => {
+    setEditingQuestionId(q.id);
+    setChangeReason("");
+    setQDomain(q.domain);
+    setQSubtopic(q.subtopic);
+    setQDifficulty(q.difficulty);
+    setQQualityStatus(q.qualityStatus || (q.active ? "ACTIVE" : "DRAFT"));
+    setQPrompt(q.prompt);
+    setQImageUrl(q.image || "");
+    setQImagePos(q.imagePosition || "ABOVE_QUESTION");
+    setQSvgData(q.svgData || "");
+
+    const optA = q.options?.find((o: any) => o.id === "A");
+    const optB = q.options?.find((o: any) => o.id === "B");
+    const optC = q.options?.find((o: any) => o.id === "C");
+    const optD = q.options?.find((o: any) => o.id === "D");
+
+    setQOptionA(optA?.text || "");
+    setQOptionAImage(optA?.image || "");
+    setQOptionB(optB?.text || "");
+    setQOptionBImage(optB?.image || "");
+    setQOptionC(optC?.text || "");
+    setQOptionCImage(optC?.image || "");
+    setQOptionD(optD?.text || "");
+    setQOptionDImage(optD?.image || "");
+
+    setQCorrectAnswer(q.correctAnswer || "A");
+    setQExplanation(q.explanation || "");
+    setQSolvingStrategy(q.solvingStrategy || "");
+    setShowFormModal(true);
+  };
+
+  const handleImageUpload = async (file: File, target: "prompt" | "optA" | "optB" | "optC" | "optD") => {
+    setIsUploadingImage(true);
+    setErrorMsg(null);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      if (editingQuestionId) {
+        formData.append("questionId", editingQuestionId);
+      }
+      if (target.startsWith("opt")) {
+        formData.append("optionId", target.replace("opt", ""));
+      }
+
+      const res = await fetch("/api/admin/images/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Gagal mengunggah gambar.");
+      }
+
+      if (target === "prompt") setQImageUrl(data.url);
+      if (target === "optA") setQOptionAImage(data.url);
+      if (target === "optB") setQOptionBImage(data.url);
+      if (target === "optC") setQOptionCImage(data.url);
+      if (target === "optD") setQOptionDImage(data.url);
+
+      setStatusMsg("Gambar berhasil diunggah!");
+    } catch (err: any) {
+      setErrorMsg(err.message || "Gagal memproses gambar.");
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
+
+  const handleSaveQuestion = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newQPrompt || !newQOptionA || !newQOptionB) {
-      alert("Harap isi soal dan minimal Opsi A & B.");
+    setErrorMsg(null);
+
+    const options = [
+      { id: "A", text: qOptionA, image: qOptionAImage || undefined },
+      { id: "B", text: qOptionB, image: qOptionBImage || undefined },
+      { id: "C", text: qOptionC, image: qOptionCImage || undefined },
+      { id: "D", text: qOptionD, image: qOptionDImage || undefined },
+    ].filter((o) => Boolean(o.text) || Boolean(o.image));
+
+    if (options.length < 2) {
+      setErrorMsg("Wajib memiliki minimal 2 opsi jawaban (A dan B).");
       return;
     }
 
-    const payload = {
-      domain: newQDomain,
-      subtopic: newQSubtopic,
+    if (qQualityStatus === "ACTIVE" && !qExplanation.trim()) {
+      setErrorMsg("Penjelasan jawaban wajib diisi sebelum mengaktifkan butir soal (Quality: ACTIVE).");
+      return;
+    }
+
+    const payload: any = {
+      domain: qDomain,
+      subtopic: qSubtopic,
       questionType: "TEXT_MCQ",
-      difficulty: newQDifficulty,
-      prompt: newQPrompt,
-      options: [
-        { id: "A", text: newQOptionA },
-        { id: "B", text: newQOptionB },
-        { id: "C", text: newQOptionC },
-        { id: "D", text: newQOptionD },
-      ].filter((o) => Boolean(o.text)),
-      correctAnswer: newQCorrectAnswer,
-      explanation: newQExplanation,
-      solvingStrategy: newQSolvingStrategy,
-      tags: ["admin_created", newQSubtopic],
+      difficulty: qDifficulty,
+      qualityStatus: qQualityStatus,
+      active: qQualityStatus === "ACTIVE",
+      prompt: qPrompt,
+      image: qImageUrl || null,
+      imagePosition: qImagePos,
+      svgData: qSvgData || null,
+      options,
+      correctAnswer: qCorrectAnswer,
+      explanation: qExplanation,
+      solvingStrategy: qSolvingStrategy,
+      tags: ["admin_managed", qSubtopic],
     };
 
     try {
-      const res = await fetch("/api/admin/questions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setStatusMsg("Soal baru berhasil ditambahkan!");
-        setShowCreateModal(false);
-        // Reset form
-        setNewQPrompt("");
-        setNewQOptionA("");
-        setNewQOptionB("");
-        setNewQOptionC("");
-        setNewQOptionD("");
-        setNewQExplanation("");
-        setNewQSolvingStrategy("");
-        loadQuestions();
+      let res;
+      if (editingQuestionId) {
+        payload.id = editingQuestionId;
+        payload.changeReason = changeReason || "Pembaruan isi dan kunci jawaban oleh admin";
+        res = await fetch("/api/admin/questions", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      } else {
+        res = await fetch("/api/admin/questions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
       }
-    } catch (err) {
-      console.error(err);
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Gagal menyimpan butir soal.");
+      }
+
+      setStatusMsg(
+        editingQuestionId
+          ? `Butir soal ${editingQuestionId} berhasil diperbarui (Snapshot versi tersimpan).`
+          : "Butir soal baru berhasil ditambahkan."
+      );
+      setShowFormModal(false);
+      loadQuestions();
+    } catch (err: any) {
+      setErrorMsg(err.message);
     }
   };
 
@@ -118,17 +273,31 @@ export default function AdminQuestionsPage() {
       const res = await fetch("/api/admin/questions", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, active: !currentActive }),
+        body: JSON.stringify({
+          id,
+          active: !currentActive,
+          qualityStatus: !currentActive ? "ACTIVE" : "DRAFT",
+        }),
       });
       const data = await res.json();
       if (data.success) {
         setQuestions((prev) =>
-          prev.map((q) => (q.id === id ? { ...q, active: !currentActive } : q))
+          prev.map((q) =>
+            q.id === id ? { ...q, active: !currentActive, qualityStatus: !currentActive ? "ACTIVE" : "DRAFT" } : q
+          )
         );
+      } else {
+        setErrorMsg(data.error);
       }
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      setErrorMsg(err.message);
     }
+  };
+
+  const handleOpenPreview = (q: any) => {
+    setPreviewQuestion(q);
+    setPreviewMode("user");
+    setPreviewSelectedAnswer(null);
   };
 
   const filtered = questions.filter((q) => {
@@ -159,20 +328,46 @@ export default function AdminQuestionsPage() {
               <span>Manajemen Bank Soal & Kurikulum</span>
             </h1>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-3">
+            <BetaBadge />
             <Button size="sm" variant="outline" onClick={handleExportJson} className="text-xs">
               <Download className="h-3.5 w-3.5 mr-1" />
               <span>Ekspor JSON</span>
             </Button>
             <Button
               size="sm"
-              onClick={() => setShowCreateModal(true)}
-              className="bg-blue-900 hover:bg-blue-800 text-xs font-semibold"
+              onClick={handleOpenCreateModal}
+              className="bg-blue-900 hover:bg-blue-800 text-xs font-semibold text-white"
             >
               <Plus className="h-3.5 w-3.5 mr-1" />
               <span>Tambah Soal</span>
             </Button>
           </div>
+        </div>
+
+        {/* Navigation Tabs */}
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 flex space-x-6 text-xs font-medium border-t border-slate-100">
+          <Link
+            href="/admin"
+            className="py-3 text-blue-900 border-b-2 border-blue-900 font-bold flex items-center space-x-1.5"
+          >
+            <BookOpen className="h-3.5 w-3.5" />
+            <span>Bank Soal & Kurikulum</span>
+          </Link>
+          <Link
+            href="/admin/question-reports"
+            className="py-3 text-slate-500 hover:text-slate-900 flex items-center space-x-1.5 border-b-2 border-transparent"
+          >
+            <Flag className="h-3.5 w-3.5 text-rose-600" />
+            <span>Laporan Soal</span>
+          </Link>
+          <Link
+            href="/admin/users"
+            className="py-3 text-slate-500 hover:text-slate-900 flex items-center space-x-1.5 border-b-2 border-transparent"
+          >
+            <Users className="h-3.5 w-3.5" />
+            <span>Pengguna & Hak Akses</span>
+          </Link>
         </div>
       </header>
 
@@ -184,21 +379,44 @@ export default function AdminQuestionsPage() {
             <button onClick={() => setStatusMsg(null)}><X className="h-4 w-4" /></button>
           </div>
         )}
+        {errorMsg && (
+          <div className="p-3 bg-red-50 border border-red-200 text-red-800 rounded-lg text-xs font-semibold flex items-center justify-between">
+            <span className="flex items-center"><AlertCircle className="h-4 w-4 mr-1.5 shrink-0" />{errorMsg}</span>
+            <button onClick={() => setErrorMsg(null)}><X className="h-4 w-4" /></button>
+          </div>
+        )}
 
         {/* Filters Bar */}
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="flex items-center space-x-2 w-full sm:w-auto">
-            <span className="text-xs font-semibold text-slate-500 whitespace-nowrap">Filter Domain:</span>
-            <select
-              value={selectedDomain}
-              onChange={(e) => setSelectedDomain(e.target.value)}
-              className="rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs text-slate-800 font-medium focus:ring-2 focus:ring-blue-600"
-            >
-              <option value="ALL">Semua Domain ({questions.length})</option>
-              {Object.entries(DOMAIN_LABELS).map(([k, label]) => (
-                <option key={k} value={k}>{label}</option>
-              ))}
-            </select>
+          <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+            <div className="flex items-center space-x-1.5">
+              <span className="text-xs font-semibold text-slate-500 whitespace-nowrap">Filter Domain:</span>
+              <select
+                value={selectedDomain}
+                onChange={(e) => setSelectedDomain(e.target.value)}
+                className="rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs text-slate-800 font-medium focus:ring-2 focus:ring-blue-600"
+              >
+                <option value="ALL">Semua Domain ({questions.length})</option>
+                {Object.entries(DOMAIN_LABELS).map(([k, label]) => (
+                  <option key={k} value={k}>{label}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center space-x-1.5">
+              <span className="text-xs font-semibold text-slate-500 whitespace-nowrap">Status Kualitas:</span>
+              <select
+                value={selectedQuality}
+                onChange={(e) => setSelectedQuality(e.target.value)}
+                className="rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs text-slate-800 font-medium focus:ring-2 focus:ring-blue-600"
+              >
+                <option value="ALL">Semua Status</option>
+                <option value="ACTIVE">ACTIVE (Digunakan dalam Ujian)</option>
+                <option value="REVIEW_REQUIRED">REVIEW_REQUIRED (Perlu Ditinjau)</option>
+                <option value="DRAFT">DRAFT (Dalam Penyusunan)</option>
+                <option value="DEPRECATED">DEPRECATED (Usang)</option>
+              </select>
+            </div>
           </div>
 
           <div className="relative w-full sm:w-64">
@@ -220,11 +438,11 @@ export default function AdminQuestionsPage() {
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50 text-slate-600 font-semibold">
                   <th className="py-3 px-3">ID / Domain</th>
-                  <th className="py-3 px-3">Teks Soal</th>
+                  <th className="py-3 px-3">Teks & Visual Soal</th>
                   <th className="py-3 px-3 text-center">Kunci</th>
-                  <th className="py-3 px-3 text-center">Kesulitan</th>
-                  <th className="py-3 px-3 text-center">Statistik (Percobaan / Akurasi)</th>
-                  <th className="py-3 px-3 text-center">Status</th>
+                  <th className="py-3 px-3 text-center">Versi</th>
+                  <th className="py-3 px-3 text-center">Laporan</th>
+                  <th className="py-3 px-3 text-center">Kualitas</th>
                   <th className="py-3 px-3 text-right">Aksi</th>
                 </tr>
               </thead>
@@ -243,51 +461,94 @@ export default function AdminQuestionsPage() {
                   </tr>
                 ) : (
                   filtered.map((q) => {
-                    const stats = q.stats || { attempts: 0, accuracy: 0, avgResponseTimeSec: 0 };
+                    const hasReports = q.reportCount > 0 || (q._count?.reports > 0);
+                    const qStatus = q.qualityStatus || (q.active ? "ACTIVE" : "DRAFT");
+
                     return (
                       <tr key={q.id} className="hover:bg-slate-50/60 transition-colors">
-                        <td className="py-3 px-3">
+                        <td className="py-3 px-3 align-top">
                           <span className="font-mono font-bold text-slate-900 block">{q.id}</span>
                           <span className="text-[10px] text-slate-500">
                             {DOMAIN_LABELS[q.domain] || q.domain}
                           </span>
                         </td>
-                        <td className="py-3 px-3 max-w-md">
+                        <td className="py-3 px-3 max-w-md align-top">
                           <p className="line-clamp-2 text-slate-800 leading-snug">
                             {q.prompt}
                           </p>
+                          <div className="flex items-center space-x-2 mt-1">
+                            {q.image && (
+                              <span className="inline-flex items-center text-[10px] text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">
+                                <ImageIcon className="h-3 w-3 mr-1" />
+                                Gambar Soal
+                              </span>
+                            )}
+                            {q.svgData && (
+                              <span className="inline-flex items-center text-[10px] text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded border border-purple-200">
+                                Graphic SVG
+                              </span>
+                            )}
+                          </div>
                         </td>
-                        <td className="py-3 px-3 text-center font-bold text-blue-900">
+                        <td className="py-3 px-3 text-center font-bold text-blue-900 align-top">
                           {q.correctAnswer}
                         </td>
-                        <td className="py-3 px-3 text-center">
-                          <span className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[10px] font-semibold">
-                            {q.difficulty}
-                          </span>
+                        <td className="py-3 px-3 text-center font-mono text-[11px] text-slate-500 align-top">
+                          v{q.version || 1}
                         </td>
-                        <td className="py-3 px-3 text-center">
-                          <span className="font-semibold text-slate-800 block">
-                            {stats.attempts}x | {stats.accuracy}%
-                          </span>
-                          <span className="text-[10px] text-slate-400 font-mono">
-                            Rata-rata: {stats.avgResponseTimeSec}s
-                          </span>
+                        <td className="py-3 px-3 text-center align-top">
+                          {hasReports ? (
+                            <Link href={`/admin/question-reports?search=${encodeURIComponent(q.id)}`}>
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200 hover:underline">
+                                <Flag className="h-3 w-3 mr-1" />
+                                {q.reportCount || q._count?.reports || 1} Laporan
+                              </span>
+                            </Link>
+                          ) : (
+                            <span className="text-[10px] text-slate-400">0</span>
+                          )}
                         </td>
-                        <td className="py-3 px-3 text-center">
+                        <td className="py-3 px-3 text-center align-top">
                           <span
                             className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                              q.active ? "bg-emerald-100 text-emerald-800" : "bg-slate-200 text-slate-600"
+                              qStatus === "ACTIVE"
+                                ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                                : qStatus === "REVIEW_REQUIRED"
+                                ? "bg-rose-100 text-rose-800 border border-rose-300 animate-pulse"
+                                : qStatus === "DRAFT"
+                                ? "bg-amber-100 text-amber-800 border border-amber-200"
+                                : "bg-slate-200 text-slate-600"
                             }`}
                           >
-                            {q.active ? "Aktif" : "Nonaktif"}
+                            {qStatus}
                           </span>
                         </td>
-                        <td className="py-3 px-3 text-right">
+                        <td className="py-3 px-3 text-right space-x-1.5 align-top">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleOpenPreview(q)}
+                            className="text-xs h-7 px-2 text-blue-900 hover:bg-blue-50"
+                            title="Buka Pratinjau Dual-Mode"
+                          >
+                            <Eye className="h-3.5 w-3.5 mr-1" />
+                            <span>Preview</span>
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleOpenEditModal(q)}
+                            className="text-xs h-7 px-2 text-slate-700"
+                            title="Edit Butir Soal"
+                          >
+                            <Edit2 className="h-3.5 w-3.5 mr-1" />
+                            <span>Edit</span>
+                          </Button>
                           <Button
                             size="sm"
                             variant="ghost"
                             onClick={() => handleToggleActive(q.id, q.active)}
-                            className="text-xs h-7 px-2 text-slate-600 hover:text-slate-900"
+                            className="text-xs h-7 px-2 text-slate-500 hover:text-slate-900"
                           >
                             {q.active ? "Nonaktifkan" : "Aktifkan"}
                           </Button>
@@ -302,22 +563,113 @@ export default function AdminQuestionsPage() {
         </div>
       </main>
 
-      {/* Create Question Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl border border-slate-200 max-w-xl w-full p-6 shadow-xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
-              <h3 className="text-base font-bold text-slate-900">Tambah Butir Soal Baru</h3>
-              <button onClick={() => setShowCreateModal(false)}><X className="h-5 w-5 text-slate-400" /></button>
+      {/* Dual Preview Modal */}
+      {previewQuestion && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-2xs flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white rounded-2xl border border-slate-200 max-w-2xl w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3 mb-4">
+              <div>
+                <h3 className="text-base font-bold text-slate-900 flex items-center">
+                  <Eye className="h-4 w-4 mr-2 text-blue-900" />
+                  <span>Pratinjau Butir Soal ({previewQuestion.id})</span>
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Uji keterbacaan visual dan transparansi kunci jawaban
+                </p>
+              </div>
+              <button
+                onClick={() => setPreviewQuestion(null)}
+                className="text-slate-400 hover:text-slate-700 p-1"
+              >
+                <X className="h-5 w-5" />
+              </button>
             </div>
 
-            <form onSubmit={handleCreateQuestion} className="space-y-4 text-xs">
-              <div className="grid grid-cols-2 gap-3">
+            {/* Mode Switcher */}
+            <div className="flex items-center justify-center bg-slate-100 p-1 rounded-xl mb-5 space-x-1">
+              <button
+                type="button"
+                onClick={() => setPreviewMode("user")}
+                className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                  previewMode === "user"
+                    ? "bg-white text-slate-900 shadow-2xs font-bold"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                Tampilan Kandidat (Preview as User)
+              </button>
+              <button
+                type="button"
+                onClick={() => setPreviewMode("key")}
+                className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                  previewMode === "key"
+                    ? "bg-emerald-700 text-white shadow-2xs font-bold"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                Tampilan Kunci Jawaban (Preview with Key)
+              </button>
+            </div>
+
+            {/* Question Renderer in preview mode */}
+            <QuestionRenderer
+              question={previewQuestion}
+              questionIndex={0}
+              totalQuestionsInModule={1}
+              selectedAnswer={previewSelectedAnswer}
+              onSelectAnswer={(ans) => setPreviewSelectedAnswer(ans)}
+              previewWithKey={previewMode === "key"}
+            />
+
+            <div className="mt-5 pt-3 border-t border-slate-100 flex justify-end">
+              <Button size="sm" onClick={() => setPreviewQuestion(null)} className="text-xs">
+                Tutup Pratinjau
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create / Edit Question Modal */}
+      {showFormModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-2xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl border border-slate-200 max-w-3xl w-full p-6 shadow-2xl max-h-[92vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">
+                  {editingQuestionId ? `Edit Butir Soal (${editingQuestionId})` : "Tambah Butir Soal Baru"}
+                </h3>
+                <p className="text-xs text-slate-500">
+                  {editingQuestionId
+                    ? "Setiap pembaruan akan membuat snapshot versi baru di QuestionVersion secara otomatis."
+                    : "Lengkapi data teks, stimulus visual, dan kunci jawaban dengan penjelasan."}
+                </p>
+              </div>
+              <button onClick={() => setShowFormModal(false)}><X className="h-5 w-5 text-slate-400" /></button>
+            </div>
+
+            <form onSubmit={handleSaveQuestion} className="space-y-4 text-xs">
+              {editingQuestionId && (
+                <div className="bg-blue-50 border border-blue-200 p-3 rounded-xl">
+                  <label className="font-bold text-blue-950 block mb-1">
+                    Alasan Perubahan / Catatan Revisi:
+                  </label>
+                  <input
+                    type="text"
+                    value={changeReason}
+                    onChange={(e) => setChangeReason(e.target.value)}
+                    placeholder="Contoh: Memperbaiki ketidakjelasan gambar opsi C dan memperjelas penjelasan..."
+                    className="w-full p-2 text-xs bg-white border border-blue-300 rounded focus:ring-1 focus:ring-blue-600"
+                  />
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="font-bold text-slate-700 block mb-1">Domain</label>
                   <select
-                    value={newQDomain}
-                    onChange={(e) => setNewQDomain(e.target.value)}
+                    value={qDomain}
+                    onChange={(e) => setQDomain(e.target.value)}
                     className="w-full p-2 border rounded border-slate-300"
                   >
                     {Object.entries(DOMAIN_LABELS).map(([k, label]) => (
@@ -325,16 +677,32 @@ export default function AdminQuestionsPage() {
                     ))}
                   </select>
                 </div>
+
                 <div>
                   <label className="font-bold text-slate-700 block mb-1">Tingkat Kesulitan</label>
                   <select
-                    value={newQDifficulty}
-                    onChange={(e) => setNewQDifficulty(e.target.value)}
+                    value={qDifficulty}
+                    onChange={(e) => setQDifficulty(e.target.value)}
                     className="w-full p-2 border rounded border-slate-300"
                   >
                     <option value="EASY">EASY</option>
                     <option value="MODERATE">MODERATE</option>
                     <option value="HARD">HARD</option>
+                    <option value="VERY_HARD">VERY_HARD</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Status Kualitas</label>
+                  <select
+                    value={qQualityStatus}
+                    onChange={(e) => setQQualityStatus(e.target.value)}
+                    className="w-full p-2 border rounded border-slate-300 font-semibold"
+                  >
+                    <option value="ACTIVE">ACTIVE (Siap Diujikan)</option>
+                    <option value="REVIEW_REQUIRED">REVIEW_REQUIRED (Perlu Tinjauan)</option>
+                    <option value="DRAFT">DRAFT (Konsep)</option>
+                    <option value="DEPRECATED">DEPRECATED (Diarsipkan)</option>
                   </select>
                 </div>
               </div>
@@ -343,97 +711,250 @@ export default function AdminQuestionsPage() {
                 <label className="font-bold text-slate-700 block mb-1">Teks Pertanyaan (Prompt)</label>
                 <textarea
                   rows={3}
-                  value={newQPrompt}
-                  onChange={(e) => setNewQPrompt(e.target.value)}
-                  placeholder="Masukkan kalimat soal..."
+                  value={qPrompt}
+                  onChange={(e) => setQPrompt(e.target.value)}
+                  placeholder="Masukkan kalimat soal dengan jelas..."
                   className="w-full p-2 border rounded border-slate-300"
                   required
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Opsi A</label>
-                  <input
-                    type="text"
-                    value={newQOptionA}
-                    onChange={(e) => setNewQOptionA(e.target.value)}
-                    className="w-full p-2 border rounded border-slate-300"
-                    required
-                  />
+              {/* Question Image Stimulus Upload */}
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-slate-800 flex items-center">
+                    <ImageIcon className="h-4 w-4 mr-1.5 text-blue-900" />
+                    <span>Gambar Stimulus Soal (Opsional)</span>
+                  </label>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-[11px] text-slate-500">Posisi Gambar:</span>
+                    <select
+                      value={qImagePos}
+                      onChange={(e) => setQImagePos(e.target.value as any)}
+                      className="p-1 border rounded text-[11px] bg-white border-slate-300"
+                    >
+                      <option value="ABOVE_QUESTION">Di Atas Teks (Above)</option>
+                      <option value="BELOW_QUESTION">Di Bawah Teks (Below)</option>
+                      <option value="INLINE">Sejajar Teks (Inline)</option>
+                    </select>
+                  </div>
                 </div>
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Opsi B</label>
+
+                <div className="flex items-center space-x-3">
                   <input
-                    type="text"
-                    value={newQOptionB}
-                    onChange={(e) => setNewQOptionB(e.target.value)}
-                    className="w-full p-2 border rounded border-slate-300"
-                    required
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                    onChange={(e) => {
+                      if (e.target.files?.[0]) {
+                        handleImageUpload(e.target.files[0], "prompt");
+                      }
+                    }}
+                    className="text-xs text-slate-600 file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-blue-100 file:text-blue-900 hover:file:bg-blue-200 cursor-pointer"
                   />
-                </div>
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Opsi C</label>
+                  <span className="text-[11px] text-slate-400">atau URL:</span>
                   <input
                     type="text"
-                    value={newQOptionC}
-                    onChange={(e) => setNewQOptionC(e.target.value)}
+                    value={qImageUrl}
+                    onChange={(e) => setQImageUrl(e.target.value)}
+                    placeholder="/uploads/questions/... atau https://..."
+                    className="flex-1 p-1.5 border rounded border-slate-300 text-xs"
+                  />
+                  {qImageUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setQImageUrl("")}
+                      className="text-rose-600 hover:underline text-[11px]"
+                    >
+                      Hapus
+                    </button>
+                  )}
+                </div>
+
+                {qImageUrl && (
+                  <div className="mt-2 p-2 bg-white rounded border border-slate-200 inline-block">
+                    <img src={qImageUrl} alt="Preview Stimulus" className="max-h-32 rounded object-contain" />
+                  </div>
+                )}
+              </div>
+
+              {/* Options Section */}
+              <div className="space-y-3">
+                <div className="font-bold text-slate-800">Pilihan Jawaban (Minimal A & B)</div>
+
+                {/* Option A */}
+                <div className="p-3 border rounded-xl border-slate-200 bg-white space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-800 text-xs">Opsi A</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        if (e.target.files?.[0]) handleImageUpload(e.target.files[0], "optA");
+                      }}
+                      className="text-[10px] text-slate-500 file:py-0.5 file:px-2 file:rounded file:border-0 file:bg-slate-100"
+                    />
+                  </div>
+                  <input
+                    type="text"
+                    value={qOptionA}
+                    onChange={(e) => setQOptionA(e.target.value)}
+                    placeholder="Teks Opsi A..."
                     className="w-full p-2 border rounded border-slate-300"
                   />
+                  {qOptionAImage && (
+                    <div className="flex items-center space-x-2">
+                      <img src={qOptionAImage} alt="Opsi A" className="h-10 rounded border" />
+                      <button type="button" onClick={() => setQOptionAImage("")} className="text-rose-600 text-[10px]">
+                        Hapus Gambar
+                      </button>
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Opsi D</label>
+
+                {/* Option B */}
+                <div className="p-3 border rounded-xl border-slate-200 bg-white space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-800 text-xs">Opsi B</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        if (e.target.files?.[0]) handleImageUpload(e.target.files[0], "optB");
+                      }}
+                      className="text-[10px] text-slate-500 file:py-0.5 file:px-2 file:rounded file:border-0 file:bg-slate-100"
+                    />
+                  </div>
                   <input
                     type="text"
-                    value={newQOptionD}
-                    onChange={(e) => setNewQOptionD(e.target.value)}
+                    value={qOptionB}
+                    onChange={(e) => setQOptionB(e.target.value)}
+                    placeholder="Teks Opsi B..."
                     className="w-full p-2 border rounded border-slate-300"
+                  />
+                  {qOptionBImage && (
+                    <div className="flex items-center space-x-2">
+                      <img src={qOptionBImage} alt="Opsi B" className="h-10 rounded border" />
+                      <button type="button" onClick={() => setQOptionBImage("")} className="text-rose-600 text-[10px]">
+                        Hapus Gambar
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Option C */}
+                <div className="p-3 border rounded-xl border-slate-200 bg-white space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-800 text-xs">Opsi C</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        if (e.target.files?.[0]) handleImageUpload(e.target.files[0], "optC");
+                      }}
+                      className="text-[10px] text-slate-500 file:py-0.5 file:px-2 file:rounded file:border-0 file:bg-slate-100"
+                    />
+                  </div>
+                  <input
+                    type="text"
+                    value={qOptionC}
+                    onChange={(e) => setQOptionC(e.target.value)}
+                    placeholder="Teks Opsi C (Opsional)..."
+                    className="w-full p-2 border rounded border-slate-300"
+                  />
+                  {qOptionCImage && (
+                    <div className="flex items-center space-x-2">
+                      <img src={qOptionCImage} alt="Opsi C" className="h-10 rounded border" />
+                      <button type="button" onClick={() => setQOptionCImage("")} className="text-rose-600 text-[10px]">
+                        Hapus Gambar
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Option D */}
+                <div className="p-3 border rounded-xl border-slate-200 bg-white space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-800 text-xs">Opsi D</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        if (e.target.files?.[0]) handleImageUpload(e.target.files[0], "optD");
+                      }}
+                      className="text-[10px] text-slate-500 file:py-0.5 file:px-2 file:rounded file:border-0 file:bg-slate-100"
+                    />
+                  </div>
+                  <input
+                    type="text"
+                    value={qOptionD}
+                    onChange={(e) => setQOptionD(e.target.value)}
+                    placeholder="Teks Opsi D (Opsional)..."
+                    className="w-full p-2 border rounded border-slate-300"
+                  />
+                  {qOptionDImage && (
+                    <div className="flex items-center space-x-2">
+                      <img src={qOptionDImage} alt="Opsi D" className="h-10 rounded border" />
+                      <button type="button" onClick={() => setQOptionDImage("")} className="text-rose-600 text-[10px]">
+                        Hapus Gambar
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Answer Key & Explanation */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Kunci Jawaban Tepat</label>
+                  <select
+                    value={qCorrectAnswer}
+                    onChange={(e) => setQCorrectAnswer(e.target.value)}
+                    className="w-full p-2 border rounded border-slate-300 font-bold text-blue-900"
+                  >
+                    <option value="A">Opsi A</option>
+                    <option value="B">Opsi B</option>
+                    <option value="C">Opsi C</option>
+                    <option value="D">Opsi D</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Strategi Eliminasi / Pacing</label>
+                  <input
+                    type="text"
+                    value={qSolvingStrategy}
+                    onChange={(e) => setQSolvingStrategy(e.target.value)}
+                    className="w-full p-2 border rounded border-slate-300"
+                    placeholder="Tips eliminasi cepat..."
                   />
                 </div>
               </div>
 
               <div>
-                <label className="font-bold text-slate-700 block mb-1">Kunci Jawaban Tepat</label>
-                <select
-                  value={newQCorrectAnswer}
-                  onChange={(e) => setNewQCorrectAnswer(e.target.value)}
-                  className="w-full p-2 border rounded border-slate-300"
-                >
-                  <option value="A">Opsi A</option>
-                  <option value="B">Opsi B</option>
-                  <option value="C">Opsi C</option>
-                  <option value="D">Opsi D</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Penjelasan Solusi</label>
+                <label className="font-bold text-slate-700 block mb-1">
+                  Penjelasan Solusi Transparan <span className="text-rose-600">*</span>
+                </label>
                 <textarea
-                  rows={2}
-                  value={newQExplanation}
-                  onChange={(e) => setNewQExplanation(e.target.value)}
+                  rows={3}
+                  value={qExplanation}
+                  onChange={(e) => setQExplanation(e.target.value)}
                   className="w-full p-2 border rounded border-slate-300"
-                  placeholder="Penjelasan runtut..."
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Strategi Waktu Singkat</label>
-                <input
-                  type="text"
-                  value={newQSolvingStrategy}
-                  onChange={(e) => setNewQSolvingStrategy(e.target.value)}
-                  className="w-full p-2 border rounded border-slate-300"
-                  placeholder="Tips eliminasi..."
+                  placeholder="Jelaskan langkah logis pembuktian jawaban secara objektif..."
+                  required={qQualityStatus === "ACTIVE"}
                 />
               </div>
 
               <div className="pt-3 border-t border-slate-100 flex justify-end space-x-2">
-                <Button type="button" variant="outline" size="sm" onClick={() => setShowCreateModal(false)}>
+                <Button type="button" variant="outline" size="sm" onClick={() => setShowFormModal(false)}>
                   Batal
                 </Button>
-                <Button type="submit" size="sm" className="bg-blue-900 hover:bg-blue-800 font-bold">
-                  Simpan Butir Soal
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={isUploadingImage}
+                  className="bg-blue-900 hover:bg-blue-800 font-bold text-white"
+                >
+                  {isUploadingImage ? "Mengunggah..." : editingQuestionId ? "Simpan Revisi Versi" : "Simpan Butir Soal"}
                 </Button>
               </div>
             </form>

@@ -14,20 +14,31 @@ export interface AnswerSubmissionItem {
 
 export async function createAssessmentSession(
   anonymousToken: string,
-  mode: SessionMode = SessionMode.FULL_SIMULATION
+  mode: SessionMode = SessionMode.FULL_SIMULATION,
+  authenticatedUserId?: string
 ) {
-  // Ensure user exists
-  let user = await prisma.user.findUnique({
-    where: { anonymousToken },
-  });
+  let user;
+
+  if (authenticatedUserId) {
+    user = await prisma.user.findUnique({
+      where: { id: authenticatedUserId },
+    });
+  }
 
   if (!user) {
-    user = await prisma.user.create({
-      data: {
-        anonymousToken,
-        displayName: "Simulated Candidate",
-      },
+    // Find or create via anonymousToken
+    user = await prisma.user.findUnique({
+      where: { anonymousToken },
     });
+
+    if (!user) {
+      user = await prisma.user.create({
+        data: {
+          anonymousToken,
+          displayName: "Simulated Candidate",
+        },
+      });
+    }
   }
 
   const blueprint = getCurriculumBlueprint();
@@ -137,7 +148,16 @@ export async function getActiveSessionState(sessionId: string) {
   const questionIds = activeModule.questionsOrder || [];
   const questionPromises = questionIds.map((qid) => getQuestionById(qid));
   const resolved = await Promise.all(questionPromises);
-  const questions = resolved.filter(Boolean);
+  const rawQuestions = resolved.filter(Boolean);
+
+  // Security: In FULL_SIMULATION, strip answer key, explanation, and strategy from client payloads
+  const sanitizedQuestions = rawQuestions.map((q) => {
+    if (session.mode === SessionMode.FULL_SIMULATION) {
+      const { correctAnswer, explanation, solvingStrategy, ...safeQuestion } = q!;
+      return safeQuestion;
+    }
+    return q;
+  });
 
   // Load existing attempts for this module
   const existingAttempts = await prisma.questionAttempt.findMany({
@@ -162,7 +182,7 @@ export async function getActiveSessionState(sessionId: string) {
     session,
     isCompleted: false,
     currentModule: activeModule,
-    questions,
+    questions: sanitizedQuestions,
     savedAnswers,
     remainingMs,
     serverTime: now.toISOString(),
@@ -234,6 +254,7 @@ export async function submitModuleAnswersInternal(params: {
         sessionId,
         moduleId: currentMod.id,
         questionId: qid,
+        questionVersion: qData?.version || 1,
         selectedAnswer: submitted?.selectedAnswer || null,
         isAnswered,
         isCorrect,

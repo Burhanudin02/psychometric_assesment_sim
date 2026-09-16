@@ -13,10 +13,15 @@ export type QuestionType =
 
 export type Difficulty = "EASY" | "MODERATE" | "HARD" | "VERY_HARD";
 
+export type QualityStatus = "DRAFT" | "ACTIVE" | "REVIEW_REQUIRED" | "DEPRECATED";
+
+export type ImagePosition = "ABOVE_QUESTION" | "BELOW_QUESTION" | "INLINE";
+
 export interface QuestionOption {
   id: string; // "A", "B", "C", "D"
   text?: string;
   svg?: string;
+  image?: string;
 }
 
 export interface QuestionItem {
@@ -25,8 +30,11 @@ export interface QuestionItem {
   subtopic: string;
   questionType: QuestionType;
   difficulty: Difficulty;
+  qualityStatus?: QualityStatus;
   prompt: string;
   svgData?: string | null;
+  image?: string | null;
+  imagePosition?: ImagePosition;
   options: QuestionOption[];
   correctAnswer: string;
   explanation: string;
@@ -37,5 +45,9 @@ export interface QuestionItem {
   generatorSeed?: string | null;
   active?: boolean;
   version?: number;
+  reportCount?: number;
+  lastReviewedAt?: string | null;
+  lastReviewedBy?: string | null;
+  reviewNote?: string | null;
   metadata?: Record<string, unknown> | null;
 }

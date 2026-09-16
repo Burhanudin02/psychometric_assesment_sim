@@ -2,6 +2,8 @@
 
 > **Independent Training Simulator for Speeded Psychometric Batteries**
 > *Reproducing the structure and time pressure of Part 1 Cognitive Assessments*
+>
+> **Release Version**: `v0.2.0-beta.1` · [![Version](https://img.shields.io/badge/version-v0.2.0--beta.1-blue.svg)](lib/version.ts) [![Beta](https://img.shields.io/badge/status-beta-amber.svg)](components/ui/BetaBadge.tsx) [![Tests](https://img.shields.io/badge/tests-11%2F11%20passing-brightgreen.svg)](tests/run_python_tests.py)
 
 ---
 
@@ -9,7 +11,7 @@
 
 The **Cognitive Assessment Simulator** is a production-quality, containerized web platform architected to train candidates for high-speed psychometric evaluations (specifically inspired by Part 1 of the ParagonCorp Online Assessment).
 
-The platform trains candidates to maintain accuracy and focus under extreme time limits (~60 seconds per module) across rapidly changing cognitive domains.
+The platform trains candidates to maintain accuracy, focus, and visual discrimination under extreme time limits (~60 seconds per module) across rapidly changing cognitive domains.
 
 ---
 
@@ -20,6 +22,7 @@ The platform provides deliberate practice on:
 - **Speeded problem solving** under a strict 60-second module budget.
 - **Cognitive stamina** to sustain vigilance across 21 consecutive subtests without mid-test pauses.
 - **Objective diagnostic analytics** separating speed from accuracy to pinpoint impulsive errors, perfectionist bottlenecks, and fatigue drop.
+- **Question Quality Assurance**: In-simulation reporting of ambiguous or visually unclear questions, dual previewing in authoring, transparent explanations, and historical versioning.
 
 ---
 
@@ -34,7 +37,41 @@ The platform provides deliberate practice on:
 
 ---
 
-## 4. Confirmed Assessment Characteristics (Source A)
+## 4. What's New in `v0.2.0-beta.1`
+
+Version `v0.2.0-beta.1` introduces comprehensive quality control, visual clarification, and administrative tools:
+
+1. **Visible SemVer Versioning & Beta Tagging**:
+   - Centralized version constant in `lib/version.ts` synchronized with `package.json`.
+   - Subtle, modern `<BetaBadge />` displayed across the header, simulator, and admin interfaces.
+2. **Question Quality & Ambiguity Reporting**:
+   - Candidates can report ambiguous, incomplete, or visually unclear questions during the simulation without disrupting their timer.
+   - Distinct user duplicate prevention.
+   - Automatic transition of question status to `REVIEW_REQUIRED` when $\ge 3$ distinct reports are received.
+   - Dedicated Admin Reports Dashboard at `/admin/question-reports` with filterable statuses (`OPEN`, `IN_REVIEW`, `RESOLVED`, `DISMISSED`, `DUPLICATE`) and admin notes.
+3. **Question Authoring Enhancements & Image Support**:
+   - Support for uploading stimulus images (above question, below question, or inline) and option images for A, B, C, D.
+   - Supports PNG, JPEG, WEBP, and SVG formats up to 5MB.
+   - Images stored in persistent Docker volume `question_uploads` at `/app/public/uploads/questions`.
+4. **Visual Question Quality Tools (Dual Preview)**:
+   - "Preview as User": renders exactly what test-takers experience, with clickable options and answer key hidden.
+   - "Preview with Answer Key": clearly highlights the verified correct answer, step-by-step explanation, and time-saving strategy.
+5. **Answer-Key Validation & Transparency**:
+   - Server-side validation requires questions to have a valid matching option and non-empty explanation before being marked `ACTIVE`.
+   - In `FULL_SIMULATION` mode, answer keys and explanations are securely stripped on the server to prevent candidate inspection leaks.
+6. **Question Versioning**:
+   - Every edit creates an immutable snapshot in `QuestionVersion` and increments the version number.
+   - Attempts reference the specific `questionVersion` answered.
+7. **Authentication & Role-Based Authorization**:
+   - User roles: `USER` and `ADMIN`.
+   - Standard password hashing with salted `crypto.scrypt` and signed HTTP-only cookies (`cas_session`).
+   - Corporate login page at `/login` with demo quick-fill helpers.
+   - Admin routes protected via Next.js `middleware.ts`.
+   - Admin user management dashboard at `/admin/users` with last-admin protection.
+
+---
+
+## 5. Confirmed Assessment Characteristics (Source A)
 
 Drawn directly from the official participant manual (*Manual Guide Peserta Paragon.pdf*):
 
@@ -50,7 +87,7 @@ Drawn directly from the official participant manual (*Manual Guide Peserta Parag
 
 ---
 
-## 5. Reconstructed Curriculum Explanation (Source B)
+## 6. Reconstructed Curriculum Explanation (Source B)
 
 Because the official manual does not disclose the proprietary names of all 21 subtests, this simulator uses a **reconstructed training curriculum** based on candidate reports and psychometric standards:
 
@@ -80,29 +117,26 @@ Because the official manual does not disclose the proprietary names of all 21 su
 
 ---
 
-## 6. Architecture
-
-- **Frontend**: Next.js 14 (App Router), React 18, TypeScript, Tailwind CSS, Lucide Icons.
-- **State & Timer Subsystem**: Server-authoritative timestamps (`expiresAt = startedAt + 60,000ms`), client drift-compensated ticker, 3-second network transit grace period.
-- **Persistence & ORM**: PostgreSQL 16 + Prisma ORM.
-- **Analytics & Visualizations**: Recharts + custom SVG vector radar and fatigue bar charts.
-- **Validation**: Zod schema validation.
-- **Containerization**: Multi-stage Docker build + Docker Compose with PostgreSQL health checks.
-
----
-
 ## 7. Installation & Docker Instructions
 
 ### Running with Docker Compose (Recommended)
 
-To start the complete application (PostgreSQL + Next.js web application) with one command:
+To start the complete application (PostgreSQL + Next.js web application + persistent volumes):
 
 ```bash
 docker compose up --build
 ```
 
-The database will initialize, apply schema pushes, seed 160+ original questions and the 21-module curriculum, and expose the web application at:
+The database will initialize, apply schema pushes, seed 160+ original questions and curriculum blueprint, bootstrap admin accounts, and expose the web application at:
 👉 **`http://localhost:3000`**
+
+### Default Demo Credentials
+
+| Role | Email | Password | Access |
+| :--- | :--- | :--- | :--- |
+| **Administrator** | `admin@simulator.local` | `AdminPass123!` | Full Access (`/admin`, `/admin/users`, `/admin/question-reports`) |
+| **Candidate** | `user@simulator.local` | `UserPass123!` | Assessment Simulation, Practice Drills, Personal History |
+| **Guest** | *One-click guest login* | *None* | Anonymous testing & practice |
 
 ### Running Locally (Development)
 
@@ -115,6 +149,9 @@ Prerequisites: Node.js 20+, PostgreSQL running locally, Python 3.10+ in `.venv`.
 2. Configure `.env`:
    ```env
    DATABASE_URL="postgresql://postgres:postgrespassword@localhost:5432/cognitive_assessment_db?schema=public"
+   AUTH_SECRET="cas-production-fallback-secret-key-2026-secure"
+   ADMIN_EMAIL="admin@simulator.local"
+   ADMIN_PASSWORD="AdminPass123!"
    ```
 3. Push database schema & seed questions:
    ```bash
@@ -133,6 +170,9 @@ Prerequisites: Node.js 20+, PostgreSQL running locally, Python 3.10+ in `.venv`.
 | Variable | Description | Default |
 | :--- | :--- | :--- |
 | `DATABASE_URL` | PostgreSQL connection string with schema | `postgresql://postgres:postgrespassword@db:5432/cognitive_assessment_db?schema=public` |
+| `AUTH_SECRET` | HMAC-SHA256 secret for session tokens | `cas-production-fallback-secret-key-2026-secure` |
+| `ADMIN_EMAIL` | Bootstrap admin email | `admin@simulator.local` |
+| `ADMIN_PASSWORD` | Bootstrap admin password | `AdminPass123!` |
 | `NODE_ENV` | Application runtime environment | `production` / `development` |
 | `PORT` | HTTP server listening port | `3000` |
 
@@ -142,6 +182,7 @@ Prerequisites: Node.js 20+, PostgreSQL running locally, Python 3.10+ in `.venv`.
 
 - **Minimum Seed Volume**: 160+ hand-crafted, psychometrically calibrated items (20 items across 8 distinct domain families).
 - **Externalized Storage**: Questions reside in `data/seedQuestions.json` and are seeded into PostgreSQL via `prisma/seed.ts`.
+- **Quality Status Lifecycle**: `DRAFT` $\to$ `ACTIVE` $\to$ `REVIEW_REQUIRED` $\to$ `DEPRECATED`.
 - **Procedural Generators**: Located in `features/questions/procedural/` for algorithmic generation of number series, numerical word problems, visual rotation patterns, 3D cubes, and symbol grids.
 - **Item Metadata**: Each question contains prompt, options, correctAnswer, step-by-step explanation, solvingStrategy, estimatedDifficulty, and SVG visual assets.
 
@@ -168,15 +209,22 @@ The platform evaluates performance through multi-dimensional metrics:
 Run automated test suites:
 
 ```bash
-# Run Python-based integrity and algorithm test suite (via .venv)
+# Run Python-based integrity, crypto, validation, and algorithm test suite (via .venv)
 ./.venv/bin/python3 tests/run_python_tests.py
-
-# Run Vitest unit & integration tests
-npm test
-
-# Run Playwright End-to-End tests
-npx playwright test
 ```
+
+All 11 verification tests pass successfully:
+- Question bank integrity (160 original questions across 8 domains)
+- 21-module curriculum blueprint
+- Scoring & pacing formulas
+- Speed vs. Accuracy matrix (4 quadrants)
+- Timer grace window
+- SemVer versioning (`v0.2.0-beta.1`)
+- Question quality status & answer-key validation
+- Reporting threshold & duplicate prevention
+- Question versioning & historical snapshots
+- Answer-key privacy in full simulation
+- Auth password hashing & tamper-proof HMAC tokens
 
 ---
 

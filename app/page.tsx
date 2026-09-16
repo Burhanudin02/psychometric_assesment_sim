@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   ShieldAlert,
@@ -12,10 +12,39 @@ import {
   Layers,
   Clock,
   CheckCircle2,
+  LogIn,
+  LogOut,
+  User,
+  Shield,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { BetaBadge } from "@/components/ui/BetaBadge";
+import { APP_VERSION, RELEASE_TAG } from "@/lib/version";
 
 export default function HomePage() {
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.user) {
+          setCurrentUser(data.user);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+      setCurrentUser(null);
+      window.location.reload();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       {/* Top Corporate Nav */}
@@ -26,27 +55,65 @@ export default function HomePage() {
               CAS
             </div>
             <div>
-              <span className="font-bold text-slate-900 tracking-tight text-base sm:text-lg">
-                Cognitive Assessment Simulator
-              </span>
-              <span className="ml-2 text-xs bg-blue-100 text-blue-900 font-semibold px-2 py-0.5 rounded">
-                Part 1 Training
+              <div className="flex items-center space-x-2">
+                <span className="font-bold text-slate-900 tracking-tight text-base sm:text-lg">
+                  Cognitive Assessment Simulator
+                </span>
+                <BetaBadge />
+              </div>
+              <span className="text-[11px] text-slate-500 font-medium">
+                Part 1 Speeded Cognitive Assessment Training
               </span>
             </div>
           </div>
-          <nav className="flex items-center space-x-2 sm:space-x-4">
+
+          <nav className="flex items-center space-x-2 sm:space-x-3">
             <Link href="/dashboard">
               <Button variant="ghost" size="sm" className="text-xs text-slate-700">
                 <History className="h-4 w-4 mr-1.5" />
                 <span>Riwayat</span>
               </Button>
             </Link>
-            <Link href="/admin">
-              <Button variant="outline" size="sm" className="text-xs border-slate-300">
-                <Settings className="h-4 w-4 mr-1.5" />
-                <span>Admin Soal</span>
-              </Button>
-            </Link>
+
+            {currentUser?.role === "ADMIN" ? (
+              <Link href="/admin">
+                <Button variant="outline" size="sm" className="text-xs border-blue-200 bg-blue-50 text-blue-900 font-semibold">
+                  <Shield className="h-3.5 w-3.5 mr-1 text-blue-800" />
+                  <span>Panel Admin</span>
+                </Button>
+              </Link>
+            ) : (
+              <Link href="/admin">
+                <Button variant="ghost" size="sm" className="text-xs text-slate-600">
+                  <Settings className="h-3.5 w-3.5 mr-1" />
+                  <span>Admin</span>
+                </Button>
+              </Link>
+            )}
+
+            {currentUser ? (
+              <div className="flex items-center space-x-2 pl-2 border-l border-slate-200">
+                <span className="text-xs font-semibold text-slate-800 hidden md:inline">
+                  {currentUser.displayName || currentUser.email}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleLogout}
+                  className="text-xs text-slate-500 hover:text-rose-600 h-8 px-2"
+                  title="Keluar / Logout"
+                >
+                  <LogOut className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            ) : (
+              <Link href="/login">
+                <Button size="sm" className="text-xs bg-blue-900 hover:bg-blue-800 text-white font-semibold">
+                  <LogIn className="h-3.5 w-3.5 mr-1" />
+                  <span>Masuk</span>
+                </Button>
+              </Link>
+            )}
           </nav>
         </div>
       </header>
@@ -108,12 +175,12 @@ export default function HomePage() {
                 </li>
                 <li className="flex items-center space-x-2">
                   <CheckCircle2 className="h-4 w-4 text-blue-800" />
-                  <span>Analisis kuadran Kecepatan vs Akurasi & diagnosa kelemahan</span>
+                  <span>Fitur pelaporan soal ambigu dan kualitas visual</span>
                 </li>
               </ul>
             </div>
             <Link href="/simulation/prepare">
-              <Button size="lg" className="w-full bg-blue-900 hover:bg-blue-800 font-bold shadow-md">
+              <Button size="lg" className="w-full bg-blue-900 hover:bg-blue-800 font-bold shadow-md text-white">
                 Mulai Simulasi 21 Modul
               </Button>
             </Link>
@@ -172,7 +239,7 @@ export default function HomePage() {
             </div>
           </div>
           <Link href="/calibration" className="shrink-0 w-full sm:w-auto">
-            <Button size="sm" className="w-full bg-blue-800 hover:bg-blue-700 text-xs font-semibold px-4">
+            <Button size="sm" className="w-full bg-blue-800 hover:bg-blue-700 text-xs font-semibold px-4 text-white">
               Mulai Uji Kalibrasi
             </Button>
           </Link>
@@ -181,11 +248,14 @@ export default function HomePage() {
 
       {/* Footer */}
       <footer className="border-t border-slate-200 bg-white py-6 text-center text-xs text-slate-500">
-        <p>
-          Cognitive Assessment Simulator &copy; 2025. Dibangun untuk simulasi persiapan kognitif objektif berkecepatan tinggi.
-        </p>
+        <div className="flex items-center justify-center space-x-2 mb-1">
+          <span>Cognitive Assessment Simulator</span>
+          <span className="text-slate-300">·</span>
+          <span className="font-mono text-slate-700 font-semibold">{RELEASE_TAG}</span>
+          <BetaBadge minimal />
+        </div>
         <p className="mt-1 text-[11px] text-slate-400">
-          Seluruh konten soal dan materi orisinil dan bebas dari data berhak cipta pihak ketiga.
+          Platform simulasi edukasi independen · Seluruh butir soal dan materi orisinil
         </p>
       </footer>
     </div>
