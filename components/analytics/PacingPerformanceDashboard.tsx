@@ -983,7 +983,7 @@ export function PacingPerformanceDashboard({
               <div className="p-3 rounded-lg border border-emerald-200 bg-emerald-50/60 text-xs flex items-center space-x-2">
                 <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
                 <span className="text-emerald-800 text-[11px]">
-                  Tidak ditemukan penurunan performa tajam (>12 poin) antar modul berurutan. Ritme Anda stabil.
+                  Tidak ditemukan penurunan performa tajam (&gt;12 poin) antar modul berurutan. Ritme Anda stabil.
                 </span>
               </div>
             )}
