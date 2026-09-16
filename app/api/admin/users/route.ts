@@ -139,3 +139,86 @@ export async function PUT(req: Request) {
   }
 }
 
+export async function DELETE(req: Request) {
+  try {
+    const adminUser = await getCurrentUser();
+    if (!adminUser || adminUser.role !== UserRole.ADMIN) {
+      return NextResponse.json(
+        { success: false, error: "Akses ditolak. Tindakan ini memerlukan hak akses Administrator." },
+        { status: 403 }
+      );
+    }
+
+    const { searchParams } = new URL(req.url);
+    let id = searchParams.get("id");
+
+    if (!id) {
+      try {
+        const body = await req.json();
+        id = body.id;
+      } catch {
+        // body was not JSON or empty
+      }
+    }
+
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: "ID pengguna yang ingin dihapus wajib disertakan." },
+        { status: 400 }
+      );
+    }
+
+    // Safety check 1: Prevent deleting self
+    if (adminUser.id === id) {
+      return NextResponse.json(
+        { success: false, error: "Operasi ditolak: Anda tidak dapat menghapus akun Anda sendiri saat sedang masuk." },
+        { status: 400 }
+      );
+    }
+
+    const targetUser = await prisma.user.findUnique({
+      where: { id },
+    });
+
+    if (!targetUser) {
+      return NextResponse.json(
+        { success: false, error: "Pengguna tidak ditemukan." },
+        { status: 404 }
+      );
+    }
+
+    // Safety check 2: Prevent deleting the last active Administrator
+    if (targetUser.role === UserRole.ADMIN && targetUser.status === UserStatus.ACTIVE) {
+      const activeAdminCount = await prisma.user.count({
+        where: { role: UserRole.ADMIN, status: UserStatus.ACTIVE },
+      });
+      if (activeAdminCount <= 1) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Operasi ditolak: Tidak dapat menghapus Administrator aktif terakhir dalam sistem.",
+          },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Perform deletion (cascades sessions and reports)
+    await prisma.user.delete({
+      where: { id },
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: `Akun pengguna ${targetUser.displayName || targetUser.email || targetUser.id} berhasil dihapus permanen.`,
+    });
+  } catch (err: any) {
+    console.error("Delete user error:", err);
+    return NextResponse.json(
+      { success: false, error: err.message || "Terjadi kesalahan saat menghapus pengguna." },
+      { status: 500 }
+    );
+  }
+}
+
+

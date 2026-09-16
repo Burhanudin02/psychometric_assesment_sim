@@ -16,6 +16,7 @@ import {
   Flag,
   AlertCircle,
   X,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BetaBadge } from "@/components/ui/BetaBadge";
@@ -47,6 +48,10 @@ export default function AdminUsersPage() {
   const [newPassword, setNewPassword] = useState("");
   const [newName, setNewName] = useState("");
   const [newRole, setNewRole] = useState<"USER" | "ADMIN">("USER");
+
+  // Delete user modal
+  const [deleteTargetUser, setDeleteTargetUser] = useState<UserItem | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Reset password modal
   const [resetTargetUser, setResetTargetUser] = useState<UserItem | null>(null);
@@ -187,6 +192,31 @@ export default function AdminUsersPage() {
       }
     } catch (err: any) {
       setErrorMsg(err.message);
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!deleteTargetUser) return;
+    setDeleting(true);
+    setErrorMsg(null);
+    setStatusMsg(null);
+
+    try {
+      const res = await fetch(`/api/admin/users?id=${deleteTargetUser.id}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Gagal menghapus pengguna.");
+      }
+
+      setStatusMsg(data.message || "Pengguna berhasil dihapus permanen.");
+      setUsers((prev) => prev.filter((u) => u.id !== deleteTargetUser.id));
+      setDeleteTargetUser(null);
+    } catch (err: any) {
+      setErrorMsg(err.message || "Gagal menghapus pengguna.");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -416,12 +446,21 @@ export default function AdminUsersPage() {
                                 setResetTargetUser(u);
                                 setResetPasswordVal("");
                               }}
-                              className="h-7 px-2 text-[11px] text-slate-600"
+                              className="h-7 px-2 text-[11px] text-slate-600 cursor-pointer"
                               title="Reset kata sandi pengguna"
                             >
                               <KeyRound className="h-3.5 w-3.5" />
                             </Button>
                           )}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setDeleteTargetUser(u)}
+                            className="h-7 px-2 text-[11px] text-rose-600 hover:text-rose-700 hover:bg-rose-50 cursor-pointer"
+                            title="Hapus akun pengguna secara permanen"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
                         </td>
                       </tr>
                     );
@@ -542,6 +581,67 @@ export default function AdminUsersPage() {
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete User Confirmation Modal */}
+      {deleteTargetUser && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white rounded-xl border border-slate-200 max-w-md w-full p-6 shadow-xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center space-x-2 text-rose-700 font-bold text-base">
+                <Trash2 className="h-5 w-5 text-rose-600" />
+                <h3>Hapus Pengguna</h3>
+              </div>
+              <button
+                onClick={() => setDeleteTargetUser(null)}
+                disabled={deleting}
+                className="text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="text-xs text-slate-600 space-y-3">
+              <p>
+                Apakah Anda yakin ingin menghapus akun pengguna berikut secara permanen?
+              </p>
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-1 font-mono text-[11px] text-slate-800">
+                <div><span className="text-slate-500 font-sans">Nama:</span> <strong>{deleteTargetUser.displayName || "Tanpa Nama"}</strong></div>
+                <div><span className="text-slate-500 font-sans">Email:</span> <strong>{deleteTargetUser.email || "Akun Tamu (Anonymous)"}</strong></div>
+                <div><span className="text-slate-500 font-sans">Hak Akses:</span> <span className="font-bold">{deleteTargetUser.role}</span></div>
+                <div><span className="text-slate-500 font-sans">Sesi Terkait:</span> <strong>{deleteTargetUser._count?.sessions || 0}</strong> sesi simulasi</div>
+              </div>
+              <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-lg text-rose-800 text-[11px] leading-relaxed flex items-start space-x-2">
+                <AlertCircle className="h-4 w-4 text-rose-600 shrink-0 mt-0.5" />
+                <div>
+                  <strong>Peringatan:</strong> Tindakan ini bersifat permanen dan tidak dapat dibatalkan. Seluruh riwayat tes, modul, jawaban, dan hasil simulasi akun ini akan dihapus dari sistem.
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end space-x-2 pt-3 border-t border-slate-100">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={deleting}
+                onClick={() => setDeleteTargetUser(null)}
+                className="text-xs cursor-pointer"
+              >
+                Batal
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                disabled={deleting}
+                onClick={handleDeleteUser}
+                className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-xs cursor-pointer"
+              >
+                {deleting ? "Menghapus..." : "Ya, Hapus Pengguna"}
+              </Button>
+            </div>
           </div>
         </div>
       )}

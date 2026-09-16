@@ -13,6 +13,7 @@ import {
   HelpCircle,
   Sparkles,
   ArrowLeft,
+  UserPlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BetaBadge } from "@/components/ui/BetaBadge";
@@ -160,50 +161,35 @@ function LoginForm() {
               </Button>
             </form>
 
-            {/* Quick Demo Access Bar */}
-            <div className="relative">
+            {/* Register Account Section */}
+            <div className="relative pt-1">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-slate-200" />
               </div>
-              <div className="relative flex justify-center text-[10px] uppercase">
-                <span className="bg-white px-2 font-bold text-slate-400">
-                  Akses Cepat Pengujian / Demo
+              <div className="relative flex justify-center text-[11px]">
+                <span className="bg-white px-2 font-medium text-slate-500">
+                  Belum memiliki akun?
                 </span>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 pt-1">
+            <Link href="/register" className="block w-full">
               <Button
                 type="button"
                 variant="outline"
-                size="sm"
-                disabled={loading}
-                onClick={() => handleDemoLogin("ADMIN")}
-                className="text-[11px] font-semibold text-slate-700 border-slate-300 hover:bg-blue-50 hover:text-blue-900 flex items-center justify-center py-2"
+                className="w-full font-bold text-xs py-2.5 rounded-lg border-blue-200 text-blue-900 hover:bg-blue-50 hover:border-blue-300 flex items-center justify-center transition-all cursor-pointer shadow-2xs"
               >
-                <Shield className="h-3.5 w-3.5 mr-1 text-blue-800" />
-                <span>Masuk Admin Demo</span>
+                <UserPlus className="h-4 w-4 mr-1.5 text-blue-800" />
+                <span>Daftar Akun</span>
               </Button>
-
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={loading}
-                onClick={() => handleDemoLogin("USER")}
-                className="text-[11px] font-semibold text-slate-700 border-slate-300 hover:bg-emerald-50 hover:text-emerald-900 flex items-center justify-center py-2"
-              >
-                <UserCheck className="h-3.5 w-3.5 mr-1 text-emerald-700" />
-                <span>Masuk User Demo</span>
-              </Button>
-            </div>
+            </Link>
 
             <div className="text-center pt-2">
               <button
                 type="button"
                 disabled={loading}
                 onClick={handleGuestLogin}
-                className="text-xs text-blue-900 font-semibold hover:underline inline-flex items-center"
+                className="text-xs text-blue-900 font-semibold hover:underline inline-flex items-center cursor-pointer"
               >
                 <Sparkles className="h-3.5 w-3.5 mr-1 text-amber-500" />
                 <span>Lanjutkan Langsung sebagai Kandidat Tamu (Guest)</span>
@@ -213,7 +199,7 @@ function LoginForm() {
 
           {/* Footer note */}
           <div className="bg-slate-50 border-t border-slate-100 p-3.5 text-center text-[10px] text-slate-500">
-            Kredensial Default Demo: Admin (<code className="font-mono text-slate-700">admin@simulator.local</code> / <code className="font-mono text-slate-700">AdminPass123!</code>)
+            Akses Administrator: <code className="font-mono text-slate-700">admin@simulator.local</code>
           </div>
         </div>
       </main>

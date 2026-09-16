@@ -181,6 +181,7 @@ export async function POST(req: Request) {
         imagePosition: imagePosition as ImagePosition,
         options,
         correctAnswer,
+        rule: rule || null,
         explanation: explanation || "",
         solvingStrategy: solvingStrategy || "",
         tags: tags || [],
@@ -191,9 +192,31 @@ export async function POST(req: Request) {
       },
     });
 
-    // Create initial snapshot version
-    await prisma.questionVersion.create({
-      data: {
+    // Create or ensure initial snapshot version
+    await prisma.questionVersion.upsert({
+      where: {
+        questionId_version: {
+          questionId: newQuestion.id,
+          version: 1,
+        },
+      },
+      update: {
+        questionData: {
+          prompt: newQuestion.prompt,
+          image: newQuestion.image,
+          imagePosition: newQuestion.imagePosition,
+          svgData: newQuestion.svgData,
+          options: newQuestion.options,
+          correctAnswer: newQuestion.correctAnswer,
+          rule: (newQuestion as any).rule,
+          explanation: newQuestion.explanation,
+          solvingStrategy: newQuestion.solvingStrategy,
+          qualityStatus: newQuestion.qualityStatus,
+        },
+        changedBy: adminUser?.id || null,
+        changeReason: "Pembuatan butir soal awal",
+      },
+      create: {
         questionId: newQuestion.id,
         version: 1,
         questionData: {
@@ -203,6 +226,7 @@ export async function POST(req: Request) {
           svgData: newQuestion.svgData,
           options: newQuestion.options,
           correctAnswer: newQuestion.correctAnswer,
+          rule: (newQuestion as any).rule,
           explanation: newQuestion.explanation,
           solvingStrategy: newQuestion.solvingStrategy,
           qualityStatus: newQuestion.qualityStatus,
@@ -229,6 +253,7 @@ export async function PUT(req: Request) {
       prompt,
       options,
       correctAnswer,
+      rule,
       explanation,
       solvingStrategy,
       image,
@@ -274,9 +299,16 @@ export async function PUT(req: Request) {
       }
     }
 
-    // Create snapshot of prior version in QuestionVersion
-    await prisma.questionVersion.create({
-      data: {
+    // Ensure prior version snapshot exists without violating unique constraint
+    await prisma.questionVersion.upsert({
+      where: {
+        questionId_version: {
+          questionId: existing.id,
+          version: existing.version,
+        },
+      },
+      update: {}, // keep original snapshot unchanged if already present
+      create: {
         questionId: existing.id,
         version: existing.version,
         questionData: {
@@ -286,16 +318,20 @@ export async function PUT(req: Request) {
           svgData: existing.svgData,
           options: existing.options,
           correctAnswer: existing.correctAnswer,
+          rule: (existing as any).rule,
           explanation: existing.explanation,
           solvingStrategy: existing.solvingStrategy,
           qualityStatus: existing.qualityStatus,
         },
         changedBy: adminUser?.id || null,
-        changeReason: changeReason || "Pembaruan oleh administrator",
+        changeReason: "Snapshot versi sebelum pembaruan",
       },
     });
 
-    // Update with incremented version
+    // Increment version safely
+    const nextVersion = existing.version + 1;
+
+    // Update question record with incremented version
     const updated = await prisma.question.update({
       where: { id },
       data: {
@@ -304,14 +340,59 @@ export async function PUT(req: Request) {
         prompt: prompt !== undefined ? prompt : undefined,
         options: options !== undefined ? options : undefined,
         correctAnswer: correctAnswer !== undefined ? correctAnswer : undefined,
+        rule: rule !== undefined ? rule : undefined,
         explanation: explanation !== undefined ? explanation : undefined,
         solvingStrategy: solvingStrategy !== undefined ? solvingStrategy : undefined,
         image: image !== undefined ? image : undefined,
         imagePosition: imagePosition !== undefined ? (imagePosition as ImagePosition) : undefined,
         svgData: svgData !== undefined ? svgData : undefined,
-        version: existing.version + 1,
+        version: nextVersion,
         lastReviewedAt: new Date(),
         lastReviewedBy: adminUser?.email || "admin",
+      },
+    });
+
+    // Save snapshot of the new version
+    await prisma.questionVersion.upsert({
+      where: {
+        questionId_version: {
+          questionId: updated.id,
+          version: nextVersion,
+        },
+      },
+      update: {
+        questionData: {
+          prompt: updated.prompt,
+          image: updated.image,
+          imagePosition: updated.imagePosition,
+          svgData: updated.svgData,
+          options: updated.options,
+          correctAnswer: updated.correctAnswer,
+          rule: (updated as any).rule,
+          explanation: updated.explanation,
+          solvingStrategy: updated.solvingStrategy,
+          qualityStatus: updated.qualityStatus,
+        },
+        changedBy: adminUser?.id || null,
+        changeReason: changeReason || "Pembaruan oleh administrator",
+      },
+      create: {
+        questionId: updated.id,
+        version: nextVersion,
+        questionData: {
+          prompt: updated.prompt,
+          image: updated.image,
+          imagePosition: updated.imagePosition,
+          svgData: updated.svgData,
+          options: updated.options,
+          correctAnswer: updated.correctAnswer,
+          rule: (updated as any).rule,
+          explanation: updated.explanation,
+          solvingStrategy: updated.solvingStrategy,
+          qualityStatus: updated.qualityStatus,
+        },
+        changedBy: adminUser?.id || null,
+        changeReason: changeReason || "Pembaruan oleh administrator",
       },
     });
 

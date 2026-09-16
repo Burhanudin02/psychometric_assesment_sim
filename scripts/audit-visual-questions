@@ -10,3 +10,4 @@ else
 fi
 
 exec "$PYTHON_CMD" "$DIR/audit_visual_questions.py" "$@"
+
