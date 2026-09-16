@@ -143,6 +143,7 @@ export async function POST(req: Request) {
       imagePosition = ImagePosition.ABOVE_QUESTION,
       options,
       correctAnswer,
+      rule,
       explanation,
       solvingStrategy,
       tags,
