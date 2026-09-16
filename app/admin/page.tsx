@@ -997,6 +997,8 @@ export default function AdminQuestionsPage() {
             </form>
           </div>
         </div>
+      )}
+
       {/* Delete Question Confirmation Modal */}
       {deleteTargetQuestion && (
         <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4 animate-in fade-in">
