@@ -231,6 +231,7 @@ export default function SimulationResultsPage() {
         <ModuleFatigueTrend
           moduleBreakdown={metrics.moduleBreakdown}
           fatigueIndex={metrics.fatigueIndex}
+          pacingSummary={metrics.pacingSummary}
         />
 
         {/* SECTION E & F: Error Taxonomy & Actionable Recommendations */}

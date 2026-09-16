@@ -1,5 +1,7 @@
 import { evaluateQuadrant, SpeedAccuracyQuadrant } from "./quadrantMatrix";
 import { analyzeFatigue } from "./fatigueAnalyzer";
+import { computePacingMetrics, PacingMetricsSummary } from "./pacingMetrics";
+import { getModuleConfig } from "@/lib/curriculum";
 
 export interface AttemptInput {
   questionId: string;
@@ -45,12 +47,19 @@ export interface CalculatedSessionResults {
   domainScores: DomainScoreSummary[];
   moduleBreakdown: {
     moduleNumber: number;
+    title?: string;
+    domain?: string;
     total: number;
+    answered?: number;
     correct: number;
+    incorrect?: number;
+    unanswered?: number;
     accuracy: number;
     medianResponseTimeMs: number;
     timedOut: boolean;
+    isAttempted?: boolean;
   }[];
+  pacingSummary?: PacingMetricsSummary;
 }
 
 export function calculateMedian(values: number[]): number {
@@ -105,18 +114,30 @@ export function calculateSessionMetrics(
     .sort(([a], [b]) => a - b)
     .map(([modNum, modAttempts]) => {
       const answered = modAttempts.filter((a) => a.isAnswered);
+      const answeredCount = answered.length;
       const correct = modAttempts.filter((a) => a.isCorrect).length;
-      const modAcc = answered.length > 0 ? (correct / answered.length) * 100 : 0;
+      const incorrect = modAttempts.filter((a) => a.isAnswered && !a.isCorrect).length;
+      const unanswered = modAttempts.filter((a) => !a.isAnswered).length;
+      const modAcc = answeredCount > 0 ? (correct / answeredCount) * 100 : 0;
       const times = answered.map((a) => a.responseTimeMs);
       const isTimedOut = modAttempts.some((a) => a.isTimedOut);
+      const config = getModuleConfig(modNum);
+      const title = config?.title || `Modul ${String(modNum).padStart(2, "0")}`;
+      const domain = config?.domain || modAttempts[0]?.domain || "GENERAL_COGNITIVE";
 
       return {
         moduleNumber: modNum,
+        title,
+        domain,
         total: modAttempts.length,
+        answered: answeredCount,
         correct,
+        incorrect,
+        unanswered,
         accuracy: Number(modAcc.toFixed(1)),
         medianResponseTimeMs: calculateMedian(times),
         timedOut: isTimedOut,
+        isAttempted: true,
       };
     });
 
@@ -191,5 +212,6 @@ export function calculateSessionMetrics(
     speedAccuracyCategory: globalQuadrant.quadrant,
     domainScores,
     moduleBreakdown,
+    pacingSummary: computePacingMetrics(attempts, 21),
   };
 }

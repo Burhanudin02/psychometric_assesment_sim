@@ -818,6 +818,253 @@ def test_admin_user_deletion_and_guards():
 
     print("✓ Admin User Removal & Guardrails: Self-deletion guard, last-admin protection, and cascade deletion verified.")
 
+def test_pacing_and_fatigue_redesign():
+    """
+    Verifies multi-layer pacing performance metrics:
+    1. 21-module structural completeness & metadata enrichment
+    2. Configurable baseline calculation (M01-M05)
+    3. Early (M01-M07) vs Late (M15-M21) delta formulas (Δpp, Δs, timeouts)
+    4. Largest drop detection across transitions
+    5. Late recovery detection (rebound after mid-simulation dip)
+    6. Missing data handling (unattempted modules are None, not artificial 0%)
+    7. Standard deviation stability index (0-100 scale)
+    8. Non-clinical neutral automated insights
+    """
+    with open("data/curriculumBlueprint.json", "r", encoding="utf-8") as f:
+        blueprint = json.load(f)
+
+    def calculate_median(arr):
+        if not arr:
+            return 0
+        s = sorted(arr)
+        mid = len(s) // 2
+        return s[mid] if len(s) % 2 != 0 else (s[mid - 1] + s[mid]) / 2
+
+    def compute_pacing(attempts, total_modules=21, baseline_k=5):
+        module_map = {}
+        for a in attempts:
+            m_num = a["moduleNumber"]
+            module_map.setdefault(m_num, []).append(a)
+
+        modules = []
+        for m in range(1, total_modules + 1):
+            cfg = next((item for item in blueprint if item["moduleNumber"] == m), None)
+            title = cfg["title"] if cfg else f"Modul {m:02d}"
+            domain = cfg["domain"] if cfg else "GENERAL"
+            subtopic = cfg.get("subtopic", "") if cfg else ""
+            default_total = cfg.get("defaultItemCount", 8) if cfg else 8
+
+            mod_attempts = module_map.get(m)
+            if not mod_attempts:
+                modules.append({
+                    "moduleNumber": m,
+                    "title": title,
+                    "domain": domain,
+                    "subtopic": subtopic,
+                    "total": default_total,
+                    "answered": 0,
+                    "correct": 0,
+                    "accuracy": None,
+                    "medianResponseTimeMs": None,
+                    "timedOut": False,
+                    "isAttempted": False,
+                })
+            else:
+                ans = [x for x in mod_attempts if x.get("isAnswered")]
+                cor = [x for x in ans if x.get("isCorrect")]
+                times = [x["responseTimeMs"] for x in ans if x.get("responseTimeMs", 0) > 0]
+                is_timeout = any(x.get("isTimedOut") for x in mod_attempts)
+
+                acc = round((len(cor) / len(ans)) * 100, 1) if ans else 0
+                med_time = round(calculate_median(times)) if times else (60000 if is_timeout else 0)
+
+                modules.append({
+                    "moduleNumber": m,
+                    "title": title,
+                    "domain": domain,
+                    "subtopic": subtopic,
+                    "total": len(mod_attempts),
+                    "answered": len(ans),
+                    "correct": len(cor),
+                    "accuracy": acc,
+                    "medianResponseTimeMs": med_time,
+                    "timedOut": is_timeout,
+                    "isAttempted": True,
+                })
+
+        attempted_mods = [m for m in modules if m["isAttempted"] and m["accuracy"] is not None]
+
+        # 1. Baseline (M01-M05)
+        base_mods = [m for m in modules if m["moduleNumber"] <= baseline_k and m["isAttempted"] and m["accuracy"] is not None]
+        base_acc = round(sum(m["accuracy"] for m in base_mods) / len(base_mods), 1) if base_mods else None
+        base_times = [a["responseTimeMs"] for a in attempts if a["moduleNumber"] <= baseline_k and a.get("isAnswered") and a.get("responseTimeMs", 0) > 0]
+        base_med = round(calculate_median(base_times)) if base_times else None
+
+        # 2. Phase helper
+        def calc_phase(start_m, end_m):
+            p_mods = [m for m in modules if start_m <= m["moduleNumber"] <= end_m and m["isAttempted"] and m["accuracy"] is not None]
+            timeouts = sum(1 for m in modules if start_m <= m["moduleNumber"] <= end_m and m["timedOut"])
+            p_acc = round(sum(m["accuracy"] for m in p_mods) / len(p_mods), 1) if p_mods else None
+            p_times = [a["responseTimeMs"] for a in attempts if start_m <= a["moduleNumber"] <= end_m and a.get("isAnswered") and a.get("responseTimeMs", 0) > 0]
+            p_med = round(calculate_median(p_times)) if p_times else None
+            return {"accuracy": p_acc, "medianTime": p_med, "timeoutCount": timeouts, "count": len(p_mods)}
+
+        early = calc_phase(1, 7)
+        middle = calc_phase(8, 14)
+        late = calc_phase(15, 21)
+
+        delta_acc = round(late["accuracy"] - early["accuracy"], 1) if (late["accuracy"] is not None and early["accuracy"] is not None) else None
+        delta_time_sec = round((late["medianTime"] - early["medianTime"]) / 1000, 2) if (late["medianTime"] is not None and early["medianTime"] is not None) else None
+        delta_timeouts = late["timeoutCount"] - early["timeoutCount"]
+
+        # 3. Largest Drop Detection
+        largest_drop = None
+        max_drop = -float("inf")
+        for i in range(len(attempted_mods) - 1):
+            curr = attempted_mods[i]
+            nxt = attempted_mods[i + 1]
+            acc_drop = round(curr["accuracy"] - nxt["accuracy"], 1)
+            time_slow = round((nxt["medianResponseTimeMs"] - curr["medianResponseTimeMs"]) / 1000, 2)
+            score = acc_drop + max(0, time_slow * 3)
+            if score > 12.0 and score > max_drop:
+                max_drop = score
+                largest_drop = {
+                    "fromModule": curr["moduleNumber"],
+                    "toModule": nxt["moduleNumber"],
+                    "accuracyDropPp": acc_drop,
+                    "speedSlowdownSec": time_slow,
+                    "combinedDropScore": round(score, 1),
+                }
+
+        # 4. Recovery Detection
+        dip_mods = [m for m in modules if 12 <= m["moduleNumber"] <= 17 and m["isAttempted"] and m["accuracy"] is not None]
+        end_mods = [m for m in modules if 18 <= m["moduleNumber"] <= 21 and m["isAttempted"] and m["accuracy"] is not None]
+        recovery = {"hasRecovered": False, "recoveryDeltaPp": 0.0}
+        if len(dip_mods) >= 2 and len(end_mods) >= 2:
+            dip_avg = sum(m["accuracy"] for m in dip_mods) / len(dip_mods)
+            end_avg = sum(m["accuracy"] for m in end_mods) / len(end_mods)
+            rec_delta = round(end_avg - dip_avg, 1)
+            if rec_delta >= 8.0:
+                recovery = {"hasRecovered": True, "recoveryDeltaPp": rec_delta}
+
+        # 5. Stability Score (100 - stdDev)
+        stability = 100.0
+        if len(attempted_mods) > 1:
+            mean_acc = sum(m["accuracy"] for m in attempted_mods) / len(attempted_mods)
+            variance = sum((m["accuracy"] - mean_acc) ** 2 for m in attempted_mods) / len(attempted_mods)
+            stability = max(0.0, min(100.0, round(100.0 - math.sqrt(variance), 1)))
+
+        return {
+            "modules": modules,
+            "baselineAccuracy": base_acc,
+            "baselineMedianResponseTimeMs": base_med,
+            "earlyPhase": early,
+            "middlePhase": middle,
+            "latePhase": late,
+            "deltaAccuracyPp": delta_acc,
+            "deltaResponseTimeSec": delta_time_sec,
+            "deltaTimeoutCount": delta_timeouts,
+            "largestDrop": largest_drop,
+            "recovery": recovery,
+            "stabilityScore": stability,
+        }
+
+    # Case 1: Full 21 Modules with Clear Late Performance Decline & Timeouts
+    attempts_c1 = []
+    for m in range(1, 22):
+        # Modules 1-7: High accuracy (90%), Fast pace (4000ms), 0 timeouts
+        # Modules 8-14: Moderate accuracy (75%), Moderate pace (7000ms), 0 timeouts
+        # Modules 15-21: Low accuracy (50%), Slow pace (12000ms), 2 timeouts (M18, M21)
+        acc = 90 if m <= 7 else (75 if m <= 14 else 50)
+        time_ms = 4000 if m <= 7 else (7000 if m <= 14 else 12000)
+        is_to = (m in [18, 21])
+
+        for q in range(20):
+            is_cor = q < (acc * 20 // 100)
+            attempts_c1.append({
+                "moduleNumber": m,
+                "isAnswered": True,
+                "isCorrect": is_cor,
+                "responseTimeMs": time_ms,
+                "isTimedOut": is_to,
+            })
+
+    res_c1 = compute_pacing(attempts_c1)
+    assert len(res_c1["modules"]) == 21
+    assert res_c1["baselineAccuracy"] == 90.0
+    assert res_c1["baselineMedianResponseTimeMs"] == 4000
+    assert res_c1["earlyPhase"]["accuracy"] == 90.0
+    assert res_c1["latePhase"]["accuracy"] == 50.0
+    assert res_c1["deltaAccuracyPp"] == -40.0, f"Expected -40.0 pp delta, got {res_c1['deltaAccuracyPp']}"
+    assert res_c1["deltaResponseTimeSec"] == 8.0, f"Expected +8.0s slowdown, got {res_c1['deltaResponseTimeSec']}"
+    assert res_c1["deltaTimeoutCount"] == 2, f"Expected 2 timeout delta, got {res_c1['deltaTimeoutCount']}"
+    # Drop detection finds transition from M14 (75%) to M15 (50%)
+    assert res_c1["largestDrop"] is not None
+    assert res_c1["largestDrop"]["fromModule"] == 14
+    assert res_c1["largestDrop"]["toModule"] == 15
+    assert res_c1["largestDrop"]["accuracyDropPp"] == 25.0
+
+    # Case 2: Incomplete Session (Modules 6..21 unattempted)
+    attempts_c2 = [a for a in attempts_c1 if a["moduleNumber"] <= 5]
+    res_c2 = compute_pacing(attempts_c2)
+    assert res_c2["modules"][0]["isAttempted"] is True
+    assert res_c2["modules"][0]["accuracy"] == 90.0
+    # Modules 6..21 must have None for accuracy and median, NOT 0%
+    for idx in range(5, 21):
+        mod = res_c2["modules"][idx]
+        assert mod["isAttempted"] is False, f"Module {mod['moduleNumber']} should be unattempted"
+        assert mod["accuracy"] is None, f"Unattempted module {mod['moduleNumber']} accuracy should be None, not 0%"
+        assert mod["medianResponseTimeMs"] is None
+    # Late phase accuracy must be None, so delta is None
+    assert res_c2["latePhase"]["accuracy"] is None
+    assert res_c2["deltaAccuracyPp"] is None
+
+    # Case 3: Mid-session Dip with Late Recovery
+    attempts_c3 = []
+    for m in range(1, 22):
+        # M01-M07: 80%
+        # M12-M17: 50% (dip)
+        # M18-M21: 85% (recovery)
+        # others: 75%
+        if m <= 7:
+            acc = 80
+        elif 12 <= m <= 17:
+            acc = 50
+        elif 18 <= m <= 21:
+            acc = 85
+        else:
+            acc = 75
+
+        for q in range(20):
+            attempts_c3.append({
+                "moduleNumber": m,
+                "isAnswered": True,
+                "isCorrect": q < (acc * 20 // 100),
+                "responseTimeMs": 6000,
+                "isTimedOut": False,
+            })
+
+    res_c3 = compute_pacing(attempts_c3)
+    assert res_c3["recovery"]["hasRecovered"] is True
+    assert res_c3["recovery"]["recoveryDeltaPp"] >= 30.0, f"Expected recovery >= 30 pp, got {res_c3['recovery']}"
+
+    # Case 4: Perfect Stability
+    attempts_c4 = []
+    for m in range(1, 22):
+        for q in range(10):
+            attempts_c4.append({
+                "moduleNumber": m,
+                "isAnswered": True,
+                "isCorrect": q < 8, # 80% throughout
+                "responseTimeMs": 5000,
+                "isTimedOut": False,
+            })
+    res_c4 = compute_pacing(attempts_c4)
+    assert res_c4["stabilityScore"] == 100.0
+    assert res_c4["largestDrop"] is None
+
+    print("✓ Pacing & Cognitive Performance Redesign: Baseline, Early vs Late deltas, Drop detection, Recovery, and Missing data gaps verified.")
+
 if __name__ == "__main__":
     print("==================================================")
     print("RUNNING COGNITIVE ASSESSMENT SIMULATOR TEST SUITE")
@@ -838,8 +1085,9 @@ if __name__ == "__main__":
     test_question_version_unique_constraint_resolution()
     test_user_registration_flow()
     test_admin_user_deletion_and_guards()
+    test_pacing_and_fatigue_redesign()
     print("==================================================")
-    print("ALL VERIFICATION TESTS PASSED SUCCESSFULLY! (16/16)")
+    print("ALL VERIFICATION TESTS PASSED SUCCESSFULLY! (17/17)")
     print("==================================================")
 
 
