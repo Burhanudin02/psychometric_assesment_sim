@@ -43,6 +43,8 @@ export default function AdminQuestionsPage() {
   const [showFormModal, setShowFormModal] = useState(false);
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
   const [changeReason, setChangeReason] = useState("");
+  const [deleteTargetQuestion, setDeleteTargetQuestion] = useState<any | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Form fields
   const [qDomain, setQDomain] = useState("NUMERICAL_REASONING");
@@ -291,6 +293,31 @@ export default function AdminQuestionsPage() {
       }
     } catch (err: any) {
       setErrorMsg(err.message);
+    }
+  };
+
+  const handleDeleteQuestion = async () => {
+    if (!deleteTargetQuestion) return;
+    setIsDeleting(true);
+    setErrorMsg(null);
+    setStatusMsg(null);
+
+    try {
+      const res = await fetch(`/api/admin/questions?id=${deleteTargetQuestion.id}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Gagal menghapus butir soal.");
+      }
+
+      setStatusMsg(data.message || `Soal ${deleteTargetQuestion.id} berhasil dihapus permanen.`);
+      setQuestions((prev) => prev.filter((q) => q.id !== deleteTargetQuestion.id));
+      setDeleteTargetQuestion(null);
+    } catch (err: any) {
+      setErrorMsg(err.message || "Gagal menghapus butir soal.");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -551,6 +578,16 @@ export default function AdminQuestionsPage() {
                             className="text-xs h-7 px-2 text-slate-500 hover:text-slate-900"
                           >
                             {q.active ? "Nonaktifkan" : "Aktifkan"}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setDeleteTargetQuestion(q)}
+                            className="text-xs h-7 px-2 text-rose-600 hover:text-rose-700 hover:bg-rose-50 cursor-pointer"
+                            title="Hapus Butir Soal"
+                          >
+                            <Trash2 className="h-3.5 w-3.5 mr-1" />
+                            <span>Hapus</span>
                           </Button>
                         </td>
                       </tr>
@@ -958,6 +995,68 @@ export default function AdminQuestionsPage() {
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      {/* Delete Question Confirmation Modal */}
+      {deleteTargetQuestion && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white rounded-xl border border-slate-200 max-w-md w-full p-6 shadow-xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center space-x-2 text-rose-700 font-bold text-base">
+                <Trash2 className="h-5 w-5 text-rose-600" />
+                <h3>Hapus Butir Soal</h3>
+              </div>
+              <button
+                onClick={() => setDeleteTargetQuestion(null)}
+                disabled={isDeleting}
+                className="text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="text-xs text-slate-600 space-y-3">
+              <p>
+                Apakah Anda yakin ingin menghapus butir soal berikut secara permanen dari bank soal?
+              </p>
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-1 font-mono text-[11px] text-slate-800">
+                <div><span className="text-slate-500 font-sans">ID:</span> <strong>{deleteTargetQuestion.id}</strong></div>
+                <div><span className="text-slate-500 font-sans">Domain:</span> <strong>{DOMAIN_LABELS[deleteTargetQuestion.domain] || deleteTargetQuestion.domain}</strong></div>
+                <div><span className="text-slate-500 font-sans">Subtopik:</span> {deleteTargetQuestion.subtopic || "-"}</div>
+                <div><span className="text-slate-500 font-sans">Kunci Jawaban:</span> <span className="font-bold text-emerald-700">{deleteTargetQuestion.correctAnswer}</span></div>
+                <div className="line-clamp-2 pt-1 font-sans text-slate-700 italic border-t border-slate-200">
+                  &quot;{deleteTargetQuestion.prompt}&quot;
+                </div>
+              </div>
+              <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-lg text-rose-800 text-[11px] leading-relaxed flex items-start space-x-2">
+                <AlertCircle className="h-4 w-4 text-rose-600 shrink-0 mt-0.5" />
+                <div>
+                  <strong>Peringatan:</strong> Tindakan ini bersifat permanen dan tidak dapat dibatalkan. Riwayat versi, laporan butir soal, dan rekaman pengujian yang berkaitan dengan butir soal ini akan dihapus dari sistem.
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end space-x-2 pt-3 border-t border-slate-100">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={isDeleting}
+                onClick={() => setDeleteTargetQuestion(null)}
+                className="text-xs cursor-pointer"
+              >
+                Batal
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                disabled={isDeleting}
+                onClick={handleDeleteQuestion}
+                className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-xs cursor-pointer"
+              >
+                {isDeleting ? "Menghapus..." : "Ya, Hapus Soal"}
+              </Button>
+            </div>
           </div>
         </div>
       )}

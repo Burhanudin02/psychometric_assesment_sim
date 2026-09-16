@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getAllQuestions } from "@/features/questions/repository";
 import { getCurrentUser } from "@/lib/auth";
-import { QualityStatus, ImagePosition } from "@prisma/client";
+import { QualityStatus, ImagePosition, UserRole } from "@prisma/client";
 
 function validateQuestionForActivation(data: {
   prompt?: string;
@@ -399,5 +399,74 @@ export async function PUT(req: Request) {
     return NextResponse.json({ success: true, question: updated });
   } catch (err: any) {
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: Request) {
+  try {
+    const adminUser = await getCurrentUser();
+    if (!adminUser || adminUser.role !== UserRole.ADMIN) {
+      return NextResponse.json(
+        { success: false, error: "Akses ditolak. Tindakan ini memerlukan hak akses Administrator." },
+        { status: 403 }
+      );
+    }
+
+    const { searchParams } = new URL(req.url);
+    let id = searchParams.get("id");
+
+    if (!id) {
+      try {
+        const body = await req.json();
+        id = body.id;
+      } catch {
+        // body wasn't JSON
+      }
+    }
+
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: "ID butir soal yang ingin dihapus wajib disertakan." },
+        { status: 400 }
+      );
+    }
+
+    const targetQuestion = await prisma.question.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        prompt: true,
+        domain: true,
+      },
+    });
+
+    if (!targetQuestion) {
+      return NextResponse.json(
+        { success: false, error: "Butir soal tidak ditemukan." },
+        { status: 404 }
+      );
+    }
+
+    // Transaction ensures linked attempts are deleted prior to question deletion
+    await prisma.$transaction(async (tx) => {
+      await tx.questionAttempt.deleteMany({
+        where: { questionId: id },
+      });
+
+      await tx.question.delete({
+        where: { id },
+      });
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: `Butir soal ${id} berhasil dihapus permanen dari bank soal.`,
+    });
+  } catch (err: any) {
+    console.error("Delete question error:", err);
+    return NextResponse.json(
+      { success: false, error: err.message || "Terjadi kesalahan saat menghapus butir soal." },
+      { status: 500 }
+    );
   }
 }

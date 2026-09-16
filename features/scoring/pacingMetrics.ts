@@ -487,3 +487,4 @@ export function generatePacingCsv(modules: ModulePerformanceItem[]): string {
 
   return [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
 }
+

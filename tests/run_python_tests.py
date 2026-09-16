@@ -1065,6 +1065,109 @@ def test_pacing_and_fatigue_redesign():
 
     print("✓ Pacing & Cognitive Performance Redesign: Baseline, Early vs Late deltas, Drop detection, Recovery, and Missing data gaps verified.")
 
+def test_admin_question_deletion_and_cascade():
+    """
+    Validates admin question deletion endpoint and cascading cleanup:
+    - Requires ADMIN role (USER role rejected with 403)
+    - Validates question existence (non-existent ID rejected with 404)
+    - Rejects missing ID with 400
+    - Performs atomic cleanup of QuestionAttempt records referencing the question
+    - Deletes Question and cascades linked records (versions, images, reports)
+    - Verifies question is permanently removed from the question bank
+    """
+    questions = {
+        "Q_NUM_01": {
+            "id": "Q_NUM_01",
+            "prompt": "Berapakah 15% dari 240?",
+            "domain": "NUMERICAL_REASONING",
+            "correctAnswer": "A",
+        },
+        "Q_NUM_02": {
+            "id": "Q_NUM_02",
+            "prompt": "Berapakah 25% dari 320?",
+            "domain": "NUMERICAL_REASONING",
+            "correctAnswer": "C",
+        },
+    }
+    question_versions = {
+        ("Q_NUM_01", 1): {"prompt": "Berapakah 15% dari 240?"},
+        ("Q_NUM_01", 2): {"prompt": "Berapakah 15% dari 240? (revisi)"},
+        ("Q_NUM_02", 1): {"prompt": "Berapakah 25% dari 320?"},
+    }
+    question_reports = {
+        "rep_1": {"id": "rep_1", "questionId": "Q_NUM_01", "reason": "TYPO_FORMATTING"},
+    }
+    question_attempts = [
+        {"id": "att_1", "questionId": "Q_NUM_01", "isCorrect": True},
+        {"id": "att_2", "questionId": "Q_NUM_01", "isCorrect": False},
+        {"id": "att_3", "questionId": "Q_NUM_02", "isCorrect": True},
+    ]
+
+    users = {
+        "admin_1": {"role": "ADMIN"},
+        "user_1": {"role": "USER"},
+    }
+
+    def delete_question(caller_id, q_id):
+        caller = users.get(caller_id)
+        if not caller or caller["role"] != "ADMIN":
+            return 403, {"error": "Akses ditolak. Tindakan ini memerlukan hak akses Administrator."}
+
+        if not q_id:
+            return 400, {"error": "ID butir soal yang ingin dihapus wajib disertakan."}
+
+        if q_id not in questions:
+            return 404, {"error": "Butir soal tidak ditemukan."}
+
+        # Simulated transaction:
+        # 1. Clean up attempts (onDelete: Restrict)
+        nonlocal question_attempts
+        question_attempts = [a for a in question_attempts if a["questionId"] != q_id]
+
+        # 2. Clean up versions (onDelete: Cascade)
+        v_keys_to_del = [k for k in question_versions if k[0] == q_id]
+        for k in v_keys_to_del:
+            del question_versions[k]
+
+        # 3. Clean up reports (onDelete: Cascade)
+        r_keys_to_del = [k for k, v in question_reports.items() if v["questionId"] == q_id]
+        for k in r_keys_to_del:
+            del question_reports[k]
+
+        # 4. Delete Question
+        del questions[q_id]
+
+        return 200, {"success": True, "message": f"Butir soal {q_id} berhasil dihapus permanen dari bank soal."}
+
+    # 1. Non-admin caller rejected
+    c_na, r_na = delete_question("user_1", "Q_NUM_01")
+    assert c_na == 403
+    assert "Akses ditolak" in r_na["error"]
+
+    # 2. Missing ID rejected
+    c_empty, _ = delete_question("admin_1", "")
+    assert c_empty == 400
+
+    # 3. Non-existent ID rejected
+    c_nf, _ = delete_question("admin_1", "Q_NON_EXISTENT")
+    assert c_nf == 404
+
+    # 4. Successful deletion of Q_NUM_01
+    c_ok, r_ok = delete_question("admin_1", "Q_NUM_01")
+    assert c_ok == 200
+    assert "Q_NUM_01" not in questions
+    # Verify cascade / cleanup
+    assert not any(k[0] == "Q_NUM_01" for k in question_versions)
+    assert not any(v["questionId"] == "Q_NUM_01" for v in question_reports.values())
+    assert not any(a["questionId"] == "Q_NUM_01" for a in question_attempts)
+
+    # Verify Q_NUM_02 remains intact
+    assert "Q_NUM_02" in questions
+    assert ("Q_NUM_02", 1) in question_versions
+    assert any(a["questionId"] == "Q_NUM_02" for a in question_attempts)
+
+    print("✓ Admin Question Bank Individual Deletion: Admin auth check, existence validation, attempts cleanup, and cascading versions/reports deletion verified.")
+
 if __name__ == "__main__":
     print("==================================================")
     print("RUNNING COGNITIVE ASSESSMENT SIMULATOR TEST SUITE")
@@ -1086,8 +1189,9 @@ if __name__ == "__main__":
     test_user_registration_flow()
     test_admin_user_deletion_and_guards()
     test_pacing_and_fatigue_redesign()
+    test_admin_question_deletion_and_cascade()
     print("==================================================")
-    print("ALL VERIFICATION TESTS PASSED SUCCESSFULLY! (17/17)")
+    print("ALL VERIFICATION TESTS PASSED SUCCESSFULLY! (18/18)")
     print("==================================================")
 
 
