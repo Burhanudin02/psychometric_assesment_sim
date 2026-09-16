@@ -1,0 +1,207 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum SessionMode {
+  CALIBRATION
+  PRACTICE
+  FULL_SIMULATION
+}
+
+enum SessionStatus {
+  NOT_STARTED
+  CALIBRATION
+  READY
+  IN_PROGRESS
+  MODULE_TIMEOUT
+  COMPLETED
+  ABANDONED
+}
+
+enum Difficulty {
+  EASY
+  MODERATE
+  HARD
+  VERY_HARD
+}
+
+enum QuestionType {
+  TEXT_MCQ
+  NUMERICAL_MCQ
+  NUMBER_SERIES
+  LOGICAL_STATEMENT
+  VERBAL_ANALOGY
+  VERBAL_CLASSIFICATION
+  SVG_PATTERN
+  SVG_MATRIX
+  SPATIAL_ROTATION
+  SYMBOL_SCANNING
+  RAPID_ARITHMETIC
+}
+
+enum ErrorCategory {
+  TIMEOUT_UNANSWERED
+  ARITHMETIC_ERROR
+  PATTERN_MISRECOGNITION
+  RULE_MISUNDERSTANDING
+  DISTRACTOR_SELECTION
+  SPATIAL_ORIENTATION_ERROR
+  CARELESS_RAPID_ERROR
+  NONE
+}
+
+model User {
+  id             String              @id @default(uuid())
+  anonymousToken String              @unique
+  displayName    String?             @default("Candidate")
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  sessions       AssessmentSession[]
+
+  @@index([anonymousToken])
+}
+
+model AssessmentSession {
+  id               String             @id @default(uuid())
+  userId           String
+  user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mode             SessionMode        @default(FULL_SIMULATION)
+  status           SessionStatus      @default(NOT_STARTED)
+  startedAt        DateTime?
+  finishedAt       DateTime?
+  currentModuleNum Int                @default(1)
+  totalModules     Int                @default(21)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  modules          AssessmentModule[]
+  attempts         QuestionAttempt[]
+  integrityEvents  IntegrityEvent[]
+  result           AssessmentResult?
+  domainResults    DomainResult[]
+
+  @@index([userId, status])
+}
+
+model AssessmentModule {
+  id             String            @id @default(uuid())
+  sessionId      String
+  session        AssessmentSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  moduleNumber   Int               // 1 to 21
+  title          String            // e.g. "01 — Numerical Speed"
+  domain         String            // e.g. "NUMERICAL_REASONING"
+  subtopic       String            // e.g. "rapid_arithmetic"
+  timeLimitMs    Int               @default(60000) // 60 seconds
+  startedAt      DateTime?
+  finishedAt     DateTime?
+  expiresAt      DateTime?
+  isCompleted    Boolean           @default(false)
+  isTimedOut     Boolean           @default(false)
+  questionsOrder String[]          // Ordered list of Question IDs
+
+  attempts       QuestionAttempt[]
+
+  @@unique([sessionId, moduleNumber])
+  @@index([sessionId, isCompleted])
+}
+
+model Question {
+  id                  String            @id @default(uuid())
+  domain              String            // Domain taxonomy key e.g. "NUMERICAL_REASONING"
+  subtopic            String
+  questionType        QuestionType
+  difficulty          Difficulty        @default(MODERATE)
+  prompt              String            @db.Text
+  svgData             String?           @db.Text // Embedded SVG markup for figural/spatial items
+  options             Json              // Array of { id: "A"|"B"|"C"|"D", text?: string, svg?: string }
+  correctAnswer       String            // "A", "B", "C", "D" or exact numerical string
+  explanation         String            @db.Text
+  solvingStrategy     String            @db.Text
+  tags                String[]
+  estimatedDifficulty Float             @default(2.5) // 1.0 to 4.0
+  isProcedural        Boolean           @default(false)
+  generatorSeed       String?
+  active              Boolean           @default(true)
+  version             Int               @default(1)
+  metadata            Json?
+
+  attempts            QuestionAttempt[]
+
+  @@index([domain, subtopic, difficulty])
+  @@index([active])
+}
+
+model QuestionAttempt {
+  id             String            @id @default(uuid())
+  sessionId      String
+  session        AssessmentSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  moduleId       String
+  module         AssessmentModule  @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  questionId     String
+  question       Question          @relation(fields: [questionId], references: [id], onDelete: Restrict)
+  selectedAnswer String?           // Selected option or null if unanswered
+  isCorrect      Boolean           @default(false)
+  isAnswered     Boolean           @default(false)
+  responseTimeMs Int               @default(0)
+  submittedAt    DateTime          @default(now())
+  isTimedOut     Boolean           @default(false)
+  errorCategory  ErrorCategory     @default(NONE)
+
+  @@index([sessionId, moduleId])
+  @@index([questionId])
+}
+
+model AssessmentResult {
+  id                    String            @id @default(uuid())
+  sessionId             String            @unique
+  session               AssessmentSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  totalQuestions        Int
+  totalAnswered         Int
+  totalCorrect          Int
+  totalIncorrect        Int
+  totalUnanswered       Int
+  accuracy              Float             // 0.0 to 100.0%
+  effectivePaceRate     Float             // Items answered per minute
+  averageResponseTimeMs Float
+  medianResponseTimeMs  Float
+  timeoutCount          Int               // Number of modules ended by timer
+  speedScore            Float             // 0.0 to 100.0
+  consistencyScore      Float             // 0.0 to 100.0 (low variance across 21 modules)
+  fatigueIndex          Float             // Performance drop in Q15-21 vs Q1-7
+  speedAccuracyCategory String            // "FAST_ACCURATE" | "FAST_INACCURATE" | "SLOW_ACCURATE" | "SLOW_INACCURATE"
+  createdAt             DateTime          @default(now())
+}
+
+model DomainResult {
+  id                    String            @id @default(uuid())
+  sessionId             String
+  session               AssessmentSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  domain                String
+  totalItems            Int
+  attempted             Int
+  correct               Int
+  accuracy              Float
+  averageResponseTimeMs Float
+  medianResponseTimeMs  Float
+  timeoutRate           Float
+  quadrant              String            // "FAST_ACCURATE", etc.
+
+  @@unique([sessionId, domain])
+  @@index([sessionId])
+}
+
+model IntegrityEvent {
+  id        String            @id @default(uuid())
+  sessionId String
+  session   AssessmentSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  eventType String            // "FULLSCREEN_EXIT" | "TAB_HIDDEN" | "WINDOW_BLUR" | "REFRESH_ATTEMPT"
+  timestamp DateTime          @default(now())
+  metadata  Json?
+
+  @@index([sessionId, eventType])
+}

@@ -1,0 +1,26 @@
+# Node
+node_modules
+npm-debug.log
+yarn-error.log
+
+# Next.js
+.next
+out
+
+# Git & OS
+.git
+.gitignore
+.DS_Store
+*.swp
+
+# Tests & Reports
+coverage
+test-results
+playwright-report
+
+# Python & Excluded Files
+.venv
+__pycache__
+Manual Guide Peserta Paragon.pdf
+*Paragon*
+*paragon*
