@@ -7,8 +7,11 @@ import { ModuleProgressSidebar } from "@/components/assessment/ModuleProgressSid
 import { QuestionRenderer } from "@/components/assessment/QuestionRenderer";
 import { useAssessmentTimer } from "@/features/timer/useAssessmentTimer";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Loader2, AlertCircle } from "lucide-react";
+import { ArrowRight, Loader2, AlertCircle, Maximize2, ShieldAlert } from "lucide-react";
 import { QuestionItem } from "@/features/questions/types";
+
+// Configurable policy as specified in A6 (default: "strict")
+const INTEGRITY_POLICY: "strict" | "warn" | "off" = "strict";
 
 export default function ActiveSimulationPage() {
   const params = useParams();
@@ -28,13 +31,58 @@ export default function ActiveSimulationPage() {
   const [serverTime, setServerTime] = useState<string | null>(null);
   const [questions, setQuestions] = useState<QuestionItem[]>([]);
 
-  // Answers state for current module: { [questionId]: { answer, responseTimeMs } }
+  // Answers state for current module
   const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>({});
   const questionStartTimes = useRef<Record<string, number>>({});
   const moduleStartTimeRef = useRef<number>(Date.now());
 
-  // Prevent duplicate auto-submit triggers
+  // Prevent duplicate auto-submit triggers & terminations
   const hasSubmittedRef = useRef<boolean>(false);
+  const isTerminatingRef = useRef<boolean>(false);
+
+  // A1. Explicit state: simulationIntegrityActive = true ONLY after verified fullscreen
+  const [simulationIntegrityActive, setSimulationIntegrityActive] = useState<boolean>(false);
+  const [needsFullscreenPrompt, setNeedsFullscreenPrompt] = useState<boolean>(false);
+
+  // Terminate simulation idempotently (Section A7)
+  const terminateSimulation = useCallback(
+    async (reason: string) => {
+      if (isTerminatingRef.current) return;
+      isTerminatingRef.current = true;
+      setSimulationIntegrityActive(false);
+
+      // Collect pending answers for current module
+      const answersPayload = questions.map((q) => {
+        const sel = selectedAnswers[q.id] || null;
+        const qStart = questionStartTimes.current[q.id] || moduleStartTimeRef.current;
+        const elapsed = Math.max(500, Date.now() - qStart);
+        return {
+          questionId: q.id,
+          selectedAnswer: sel,
+          responseTimeMs: elapsed,
+        };
+      });
+
+      try {
+        await fetch("/api/assessment/terminate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sessionId,
+            moduleNumber: currentModuleNum,
+            answers: answersPayload,
+            reason,
+          }),
+        });
+      } catch (err) {
+        console.error("Error sending terminate request:", err);
+      }
+
+      // Route immediately to dedicated termination screen
+      router.replace(`/simulation/${sessionId}/terminated`);
+    },
+    [sessionId, currentModuleNum, questions, selectedAnswers, router]
+  );
 
   // Sync state from server
   const fetchSessionState = useCallback(async () => {
@@ -45,6 +93,11 @@ export default function ActiveSimulationPage() {
       if (!data.success) {
         setErrorMsg(data.error || "Gagal memuat status asesmen.");
         setIsLoading(false);
+        return;
+      }
+
+      if (data.session?.status === "INTEGRITY_TERMINATED") {
+        router.replace(`/simulation/${sessionId}/terminated`);
         return;
       }
 
@@ -77,6 +130,17 @@ export default function ActiveSimulationPage() {
 
       hasSubmittedRef.current = false;
       setIsLoading(false);
+
+      // Verify fullscreen status before enabling integrity monitoring (A1 & A5)
+      if (typeof document !== "undefined") {
+        if (document.fullscreenElement) {
+          setSimulationIntegrityActive(true);
+          setNeedsFullscreenPrompt(false);
+        } else {
+          setNeedsFullscreenPrompt(true);
+          setSimulationIntegrityActive(false);
+        }
+      }
     } catch (err: any) {
       setErrorMsg(err.message || "Gagal terhubung ke server.");
       setIsLoading(false);
@@ -87,10 +151,28 @@ export default function ActiveSimulationPage() {
     fetchSessionState();
   }, [fetchSessionState]);
 
-  // Submit current module answers
+  // Request fullscreen and activate integrity
+  const handleActivateFullscreen = async () => {
+    try {
+      if (document.documentElement.requestFullscreen) {
+        await document.documentElement.requestFullscreen();
+      }
+      setNeedsFullscreenPrompt(false);
+      // Wait one tick for browser state to settle
+      setTimeout(() => {
+        if (document.fullscreenElement) {
+          setSimulationIntegrityActive(true);
+        }
+      }, 200);
+    } catch (err) {
+      console.warn("Fullscreen request error:", err);
+    }
+  };
+
+  // Submit current module answers normally
   const handleSubmitModule = useCallback(
     async (isTimedOut = false) => {
-      if (hasSubmittedRef.current || isSubmitting) return;
+      if (hasSubmittedRef.current || isSubmitting || isTerminatingRef.current) return;
       hasSubmittedRef.current = true;
       setIsSubmitting(true);
 
@@ -123,9 +205,7 @@ export default function ActiveSimulationPage() {
           if (data.isFinished) {
             router.replace(`/simulation/${sessionId}/complete`);
           } else {
-            // Scroll to top of window for next module
             window.scrollTo({ top: 0, behavior: "smooth" });
-            // Re-fetch next module
             await fetchSessionState();
             setIsSubmitting(false);
           }
@@ -145,7 +225,7 @@ export default function ActiveSimulationPage() {
   const { formattedTime, alertLevel } = useAssessmentTimer({
     expiresAt,
     serverNow: serverTime,
-    enabled: !isLoading && !isSubmitting,
+    enabled: !isLoading && !isSubmitting && !isTerminatingRef.current,
     onTimeout: () => {
       handleSubmitModule(true);
     },
@@ -159,44 +239,70 @@ export default function ActiveSimulationPage() {
     }));
   };
 
-  // Integrity listeners (Fullscreen exit, Window blur)
+  // ============================================================
+  // INTEGRITY EVENT LISTENERS (Section A3 - A7)
+  // Active ONLY when simulationIntegrityActive === true
+  // ============================================================
   useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        fetch("/api/assessment/integrity", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            sessionId,
-            eventType: "TAB_HIDDEN",
-            metadata: { moduleNumber: currentModuleNum, timestamp: new Date().toISOString() },
-          }),
-        }).catch(() => {});
+    if (!simulationIntegrityActive) return;
+
+    // A3 & A4: Keyboard listeners for Esc and Alt
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        try {
+          e.preventDefault();
+        } catch {}
+        terminateSimulation("ESC_PRESSED");
+      } else if (e.key === "Alt") {
+        terminateSimulation("ALT_PRESSED");
       }
     };
 
+    // A5: Fullscreen Exit listener
     const handleFullscreenChange = () => {
       if (!document.fullscreenElement) {
-        fetch("/api/assessment/integrity", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            sessionId,
-            eventType: "FULLSCREEN_EXIT",
-            metadata: { moduleNumber: currentModuleNum, timestamp: new Date().toISOString() },
-          }),
-        }).catch(() => {});
+        terminateSimulation("FULLSCREEN_EXITED");
       }
     };
 
-    document.addEventListener("visibilitychange", handleVisibilityChange);
+    // A6: Visibility Change & Window Blur
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        if (INTEGRITY_POLICY === "strict") {
+          terminateSimulation("TAB_OR_WINDOW_LEFT");
+        }
+      }
+    };
+
+    const handleWindowBlur = () => {
+      if (!document.hasFocus()) {
+        if (INTEGRITY_POLICY === "strict") {
+          terminateSimulation("WINDOW_BLUR");
+        }
+      }
+    };
+
+    // A12: Page Unload / Refresh attempt
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+      terminateSimulation("REFRESH_ATTEMPT");
+    };
+
+    window.addEventListener("keydown", handleKeyDown, true);
     document.addEventListener("fullscreenchange", handleFullscreenChange);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("blur", handleWindowBlur);
+    window.addEventListener("beforeunload", handleBeforeUnload);
 
     return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("keydown", handleKeyDown, true);
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("blur", handleWindowBlur);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
     };
-  }, [sessionId, currentModuleNum]);
+  }, [simulationIntegrityActive, terminateSimulation]);
 
   if (isLoading) {
     return (
@@ -212,7 +318,7 @@ export default function ActiveSimulationPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100/60 flex flex-col">
+    <div className="min-h-screen bg-slate-100/60 flex flex-col select-none">
       {/* Top Fixed Header with live timer */}
       <AssessmentHeader
         currentModuleNum={currentModuleNum}
@@ -221,6 +327,35 @@ export default function ActiveSimulationPage() {
         formattedTime={formattedTime}
         alertLevel={alertLevel}
       />
+
+      {/* Initial Fullscreen Lock Overlay if user exited or launched without fullscreen */}
+      {needsFullscreenPrompt && (
+        <div className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl border border-slate-200 max-w-md w-full p-6 text-center shadow-2xl space-y-4">
+            <div className="mx-auto h-12 w-12 rounded-xl bg-blue-100 text-blue-900 flex items-center justify-center">
+              <Maximize2 className="h-6 w-6" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">Aktifkan Layar Penuh</h2>
+              <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                Mode Simulasi Penuh mewajibkan mode layar penuh aktif untuk memastikan integritas pengerjaan 21 modul.
+              </p>
+            </div>
+            <div className="bg-rose-50 border border-rose-200 rounded-lg p-3 text-[11px] text-rose-900 text-left flex items-start space-x-2">
+              <ShieldAlert className="h-4 w-4 text-rose-700 shrink-0 mt-0.5" />
+              <span>
+                Setelah layar penuh aktif, menekan <strong>Esc</strong>, <strong>Alt</strong>, atau keluar dari fullscreen akan langsung <strong>mengakhiri sesi</strong>.
+              </span>
+            </div>
+            <Button
+              onClick={handleActivateFullscreen}
+              className="w-full bg-blue-900 hover:bg-blue-800 text-white font-bold py-2.5 text-xs"
+            >
+              Masuk Mode Layar Penuh & Mulai Modul
+            </Button>
+          </div>
+        </div>
+      )}
 
       <div className="flex-1 mx-auto w-full max-w-7xl flex">
         {/* Left Sidebar: 21 Modules progress */}
@@ -280,7 +415,7 @@ export default function ActiveSimulationPage() {
                 size="default"
                 disabled={isSubmitting}
                 onClick={() => handleSubmitModule(false)}
-                className="w-full sm:w-auto bg-blue-900 hover:bg-blue-800 font-bold px-6 shadow-xs text-xs sm:text-sm"
+                className="w-full sm:w-auto bg-blue-900 hover:bg-blue-800 font-bold px-6 shadow-xs text-xs sm:text-sm text-white"
               >
                 {isSubmitting ? (
                   <>

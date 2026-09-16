@@ -178,17 +178,61 @@ Prerequisites: Node.js 20+, PostgreSQL running locally, Python 3.10+ in `.venv`.
 
 ---
 
-## 9. Question Bank Architecture
+## 9. Full Simulation Integrity & Browser Constraints
 
-- **Minimum Seed Volume**: 160+ hand-crafted, psychometrically calibrated items (20 items across 8 distinct domain families).
-- **Externalized Storage**: Questions reside in `data/seedQuestions.json` and are seeded into PostgreSQL via `prisma/seed.ts`.
-- **Quality Status Lifecycle**: `DRAFT` $\to$ `ACTIVE` $\to$ `REVIEW_REQUIRED` $\to$ `DEPRECATED`.
-- **Procedural Generators**: Located in `features/questions/procedural/` for algorithmic generation of number series, numerical word problems, visual rotation patterns, 3D cubes, and symbol grids.
-- **Item Metadata**: Each question contains prompt, options, correctAnswer, step-by-step explanation, solvingStrategy, estimatedDifficulty, and SVG visual assets.
+In **Full Simulation Mode**, the simulator enforces strict assessment environment integrity:
+
+- **Pre-Simulation Warning Gate**: Mandatory explicit consent checkbox acknowledging that leaving the environment terminates the test.
+- **Fullscreen Verification**: The candidate must enter fullscreen mode before simulation integrity monitoring is armed (`simulationIntegrityActive = true`).
+- **Immediate Termination Events**:
+  - `Escape` key pressed
+  - `Alt` key pressed
+  - Fullscreen exit event
+  - Window blur or tab hidden (`visibilitychange` / `blur`)
+- **Idempotent Termination API**: Calls `/api/assessment/terminate` idempotently, logs an `IntegrityEvent`, sets session status to `INTEGRITY_TERMINATED`, and computes partial score metrics labeled `PARTIAL SIMULATION`.
+- **Termination Screen & Resume Guard**: Candidates are redirected to `/simulation/[sessionId]/terminated` displaying their progress and saved answer confirmation. Resumption is strictly prohibited.
+- **Exemptions**: Practice Mode, Calibration Drills, and Admin Previews are completely exempt from integrity termination.
+
+> [!WARNING]
+> **Browser Environment Limitations**: Modern web browsers do not grant web applications absolute low-level control to suppress operating-system shortcuts (such as `Alt+Tab`, `Alt+F4`, or Windows/Meta keys). The platform implements best-effort browser event listeners (`keydown`, `visibilitychange`, `fullscreenchange`, `blur`) and terminates the assessment immediately upon detecting any departure attempt.
 
 ---
 
-## 10. Scoring Methodology & Speed-Accuracy Matrix
+## 10. Question Bank Architecture & Visual Reasoning v2.0
+
+The question bank contains 240 items (200 active items, 40 deprecated legacy visual items):
+
+### Visual Question Bank Replacement
+To address ambiguity and ensure genuine figural reasoning, all 40 legacy visual questions (`ABS_001`–`020` and `SPA_001`–`020`) have been marked `DEPRECATED` (`active: false`) and replaced by **80 new deterministic visual items** across 8 families where **every answer choice (A, B, C, D) is a visual SVG diagram**:
+
+1. **Visual Sequence Completion** (`VIS_SEQ_001`–`010`): Clockwise/counter-clockwise stepped rotation with deterministic step-size rules.
+2. **Shape Transformation & Analogy** (`VIS_TRN_001`–`010`): Two-step morphing (inversion, color inversion, secondary element addition).
+3. **Matrix Reasoning** (`VIS_MAT_001`–`010`): 2x2 Raven-style visual matrices with row/column invariant logic.
+4. **Visual Odd-One-Out** (`VIS_ODO_001`–`010`): Invariant geometric rules (sides, symmetry, parity) with pure visual candidate options.
+5. **2D Mental Rotation** (`VIS_ROT_001`–`010`): Rigid-body rotated targets vs. mirrored distractors.
+6. **Mirror Transformation** (`VIS_MIR_001`–`010`): Horizontal and vertical reflection symmetry.
+7. **Spatial Grid Position** (`VIS_POS_001`–`010`): Dot and symbol movements along perimeter/diagonal trajectories.
+8. **3D Cube Orientation** (`VIS_CUB_001`–`010`): Isometric projection cube rotations with distinct face patterns.
+
+### 7-Point Quality Gate Audit
+Run the automated quality gate auditor:
+
+```bash
+./scripts/audit-visual-questions
+```
+
+The script evaluates:
+1. `visualIntegrity`: Valid SVG syntax and responsive `viewBox` on stimulus and all options.
+2. `answerUniqueness`: Exactly 1 correct answer matching options A–D.
+3. `renderIntegrity`: Visual SVG options (no text-only options).
+4. `ruleClarity`: Explicit deterministic `rule`, `explanation`, and `solvingStrategy`.
+5. `optionCompleteness`: 4 complete options A–D.
+6. `accessibilityMetadata`: Descriptive `altText` on all options.
+7. `overallQualityGate`: PASS / FAIL status report per question and overall summary.
+
+---
+
+## 11. Scoring Methodology & Speed-Accuracy Matrix
 
 The platform evaluates performance through multi-dimensional metrics:
 
@@ -199,22 +243,24 @@ The platform evaluates performance through multi-dimensional metrics:
    - **Fast + Inaccurate**: Accuracy $< 75\%$, Median Time $\le 8.0$s *(Impulsive risk)*.
    - **Slow + Accurate**: Accuracy $\ge 75\%$, Median Time $> 8.0$s *(Perfectionist risk)*.
    - **Slow + Inaccurate**: Accuracy $< 75\%$, Median Time $> 8.0$s *(Foundational weakness)*.
-3. **Cognitive Fatigue Index**: Compares performance in Modules 1–7 vs Modules 15–21 to detect stamina degradation.
-4. **Cognitive Error Taxonomy**: Categorizes mistakes into Careless Rapid ($< 1.5$s), Arithmetic, Pattern Misrecognition, Spatial Orientation, Distractor Selection, and Timeouts.
+3. **Partial Simulation Metric**: Terminated sessions retain all submitted answers up to the point of termination and display a prominent `PARTIAL SIMULATION` badge.
 
 ---
 
-## 11. Testing & Verification
+## 12. Testing & Verification
 
 Run automated test suites:
 
 ```bash
 # Run Python-based integrity, crypto, validation, and algorithm test suite (via .venv)
 ./.venv/bin/python3 tests/run_python_tests.py
+
+# Run visual question quality gate audit
+./scripts/audit-visual-questions
 ```
 
-All 11 verification tests pass successfully:
-- Question bank integrity (160 original questions across 8 domains)
+All 13 verification tests pass successfully:
+- Question bank integrity (240 questions across 8 domains)
 - 21-module curriculum blueprint
 - Scoring & pacing formulas
 - Speed vs. Accuracy matrix (4 quadrants)
@@ -225,10 +271,6 @@ All 11 verification tests pass successfully:
 - Question versioning & historical snapshots
 - Answer-key privacy in full simulation
 - Auth password hashing & tamper-proof HMAC tokens
+- Full simulation integrity termination & idempotency
+- Visual question bank v2.0 replacement & 7-point quality gate
 
----
-
-## 12. Limitations & Future Roadmap
-
-- **Part 1 Focus**: This application specifically simulates Part 1 cognitive speed tests. Part 2 (personality/Talentlytica self-assessment) can be integrated in future phases via the modular assessment engine.
-- **Offline Mode**: Client local storage caches answers optimistically during active tests, syncing with the server. A full ServiceWorker offline PWA mode is planned for future iterations.

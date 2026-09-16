@@ -77,6 +77,9 @@ async function main() {
 
     console.log(`[Seed] Found ${questions.length} questions to seed.`);
     for (const q of questions) {
+      const qStatus = (q.qualityStatus as QualityStatus) || (q.active === false ? QualityStatus.DEPRECATED : QualityStatus.ACTIVE);
+      const isActive = q.active !== false && qStatus !== QualityStatus.DEPRECATED;
+
       const qRecord = await prisma.question.upsert({
         where: { id: q.id },
         update: {
@@ -84,16 +87,17 @@ async function main() {
           subtopic: q.subtopic,
           questionType: q.questionType as QuestionType,
           difficulty: q.difficulty as Difficulty,
-          qualityStatus: QualityStatus.ACTIVE,
+          qualityStatus: qStatus,
           prompt: q.prompt,
           svgData: q.svgData || null,
           options: q.options,
           correctAnswer: q.correctAnswer,
+          rule: q.rule || null,
           explanation: q.explanation,
           solvingStrategy: q.solvingStrategy,
           tags: q.tags || [],
           estimatedDifficulty: q.estimatedDifficulty || 2.5,
-          active: true,
+          active: isActive,
           version: q.version ?? 1,
         },
         create: {
@@ -102,16 +106,17 @@ async function main() {
           subtopic: q.subtopic,
           questionType: q.questionType as QuestionType,
           difficulty: q.difficulty as Difficulty,
-          qualityStatus: QualityStatus.ACTIVE,
+          qualityStatus: qStatus,
           prompt: q.prompt,
           svgData: q.svgData || null,
           options: q.options,
           correctAnswer: q.correctAnswer,
+          rule: q.rule || null,
           explanation: q.explanation,
           solvingStrategy: q.solvingStrategy,
           tags: q.tags || [],
           estimatedDifficulty: q.estimatedDifficulty || 2.5,
-          active: true,
+          active: isActive,
           version: q.version ?? 1,
         },
       });
@@ -136,9 +141,10 @@ async function main() {
               svgData: qRecord.svgData,
               options: qRecord.options,
               correctAnswer: qRecord.correctAnswer,
+              rule: qRecord.rule,
               explanation: qRecord.explanation,
               solvingStrategy: qRecord.solvingStrategy,
-              qualityStatus: QualityStatus.ACTIVE,
+              qualityStatus: qRecord.qualityStatus,
             },
             changedBy: admin.id,
             changeReason: "Initial seed snapshot",

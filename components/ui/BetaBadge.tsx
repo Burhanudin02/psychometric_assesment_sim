@@ -30,3 +30,4 @@ export function BetaBadge({ className = "", minimal = false }: BetaBadgeProps) {
     </span>
   );
 }
+

@@ -9,7 +9,16 @@ export type QuestionType =
   | "SVG_MATRIX"
   | "SPATIAL_ROTATION"
   | "SYMBOL_SCANNING"
-  | "RAPID_ARITHMETIC";
+  | "RAPID_ARITHMETIC"
+  | "VISUAL_SEQUENCE"
+  | "SHAPE_TRANSFORMATION"
+  | "MATRIX_REASONING"
+  | "ODD_ONE_OUT"
+  | "VISUAL_ANALOGY"
+  | "ROTATION_2D"
+  | "MIRROR_TRANSFORMATION"
+  | "SPATIAL_POSITION"
+  | "CUBE_ORIENTATION";
 
 export type Difficulty = "EASY" | "MODERATE" | "HARD" | "VERY_HARD";
 
@@ -22,6 +31,7 @@ export interface QuestionOption {
   text?: string;
   svg?: string;
   image?: string;
+  altText?: string;
 }
 
 export interface QuestionItem {
@@ -37,6 +47,7 @@ export interface QuestionItem {
   imagePosition?: ImagePosition;
   options: QuestionOption[];
   correctAnswer: string;
+  rule?: string;
   explanation: string;
   solvingStrategy: string;
   tags: string[];

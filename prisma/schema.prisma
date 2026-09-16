@@ -21,6 +21,22 @@ enum SessionStatus {
   MODULE_TIMEOUT
   COMPLETED
   ABANDONED
+  INTEGRITY_TERMINATED
+}
+
+enum TerminationReason {
+  NONE
+  USER_COMPLETED
+  TIMEOUT_COMPLETED
+  ESC_PRESSED
+  ALT_PRESSED
+  FULLSCREEN_EXITED
+  PAGE_HIDDEN
+  WINDOW_BLUR
+  TAB_OR_WINDOW_LEFT
+  REFRESH_ATTEMPT
+  NAVIGATION_ATTEMPT
+  OTHER_INTEGRITY_EVENT
 }
 
 enum Difficulty {
@@ -42,6 +58,15 @@ enum QuestionType {
   SPATIAL_ROTATION
   SYMBOL_SCANNING
   RAPID_ARITHMETIC
+  VISUAL_SEQUENCE
+  SHAPE_TRANSFORMATION
+  MATRIX_REASONING
+  ODD_ONE_OUT
+  VISUAL_ANALOGY
+  ROTATION_2D
+  MIRROR_TRANSFORMATION
+  SPATIAL_POSITION
+  CUBE_ORIENTATION
 }
 
 enum ErrorCategory {
@@ -124,6 +149,9 @@ model AssessmentSession {
   user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   mode             SessionMode        @default(FULL_SIMULATION)
   status           SessionStatus      @default(NOT_STARTED)
+  terminationReason TerminationReason @default(NONE)
+  terminatedAt     DateTime?
+  integrityTerminated Boolean         @default(false)
   startedAt        DateTime?
   finishedAt       DateTime?
   currentModuleNum Int                @default(1)
@@ -179,6 +207,7 @@ model Question {
   imagePosition       ImagePosition     @default(ABOVE_QUESTION)
   options             Json              // Array of { id: "A"|"B"|"C"|"D", text?: string, svg?: string, image?: string }
   correctAnswer       String            // "A", "B", "C", "D" or exact numerical string
+  rule                String?           @db.Text
   explanation         String            @db.Text
   solvingStrategy     String            @db.Text
   tags                String[]
@@ -315,12 +344,14 @@ model DomainResult {
 }
 
 model IntegrityEvent {
-  id        String            @id @default(uuid())
-  sessionId String
-  session   AssessmentSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  eventType String            // "FULLSCREEN_EXIT" | "TAB_HIDDEN" | "WINDOW_BLUR" | "REFRESH_ATTEMPT"
-  timestamp DateTime          @default(now())
-  metadata  Json?
+  id           String            @id @default(uuid())
+  sessionId    String
+  session      AssessmentSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  userId       String?
+  moduleNumber Int?
+  eventType    String            // "ESC_PRESSED" | "ALT_PRESSED" | "FULLSCREEN_EXIT" | "TAB_OR_WINDOW_LEFT", etc.
+  timestamp    DateTime          @default(now())
+  metadata     Json?
 
   @@index([sessionId, eventType])
 }

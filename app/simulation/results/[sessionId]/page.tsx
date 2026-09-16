@@ -130,6 +130,21 @@ export default function SimulationResultsPage() {
 
       {/* Main Container */}
       <main className="mx-auto max-w-7xl px-4 sm:px-6 pt-8 space-y-8">
+        {/* Partial Simulation Integrity Banner (Section A11) */}
+        {(data.session?.status === "INTEGRITY_TERMINATED" || data.session?.integrityTerminated) && (
+          <div className="rounded-xl border border-rose-300 bg-rose-50/90 p-5 shadow-xs text-rose-950 space-y-2">
+            <div className="flex items-center space-x-2 text-rose-800 font-extrabold text-sm uppercase tracking-wide">
+              <span className="px-2 py-0.5 rounded bg-rose-600 text-white text-[11px] font-mono">
+                PARTIAL SIMULATION
+              </span>
+              <span>Sesi Berakhir Lebih Awal Karena Protokol Integritas</span>
+            </div>
+            <p className="text-xs text-rose-900 leading-relaxed">
+              Simulasi ini dihentikan pada <strong>Modul {data.session.currentModuleNum || 1} dari 21</strong> karena terdeteksi aksi penghentian integritas (Alasan: <code>{data.session.terminationReason || "FULLSCREEN_EXITED"}</code>). Seluruh metrik di bawah ini adalah <strong>evaluasi parsial</strong> dan tidak mewakili hasil simulasi lengkap 21 subtes terstandar.
+            </p>
+          </div>
+        )}
+
         {/* Important Training Disclaimer */}
         <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-xs text-xs text-slate-600 flex items-start space-x-3">
           <ShieldCheck className="h-5 w-5 text-blue-900 shrink-0 mt-0.5" />

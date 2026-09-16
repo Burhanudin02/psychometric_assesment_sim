@@ -103,84 +103,123 @@ export function QuestionRenderer({
       )}
 
       {/* Options */}
-      <div
-        className="space-y-3 mt-5"
-        role="radiogroup"
-        aria-label={`Pilihan jawaban untuk soal ${questionIndex + 1}`}
-      >
-        {question.options.map((opt) => {
-          const isSelected = selectedAnswer === opt.id;
-          const isCorrect = previewWithKey && question.correctAnswer === opt.id;
+      {(() => {
+        const hasVisualOptions = question.options.some((opt) => !!opt.svg || !!opt.image);
 
-          return (
-            <button
-              key={opt.id}
-              type="button"
-              disabled={disabled}
-              onClick={() => onSelectAnswer(opt.id)}
-              className={`w-full text-left flex items-start space-x-3.5 p-3.5 rounded-xl border text-sm sm:text-base transition-all select-none cursor-pointer ${
-                isCorrect
-                  ? "border-emerald-500 bg-emerald-50/80 text-emerald-950 font-bold ring-2 ring-emerald-500/40 shadow-xs"
-                  : isSelected
-                  ? "border-blue-700 bg-blue-50/80 text-blue-950 font-semibold ring-2 ring-blue-600/30 shadow-xs"
-                  : "border-slate-200 bg-white text-slate-800 hover:border-slate-300 hover:bg-slate-50/60"
-              } ${disabled ? "opacity-75 cursor-not-allowed" : ""}`}
-            >
-              {/* Option Letter Tag */}
-              <span
-                className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-bold transition-colors ${
-                  isCorrect
-                    ? "bg-emerald-600 text-white"
-                    : isSelected
-                    ? "bg-blue-800 text-white"
-                    : "bg-slate-100 text-slate-700 border border-slate-200"
-                }`}
-              >
-                {opt.id}
-              </span>
+        return (
+          <div
+            className={
+              hasVisualOptions
+                ? "grid grid-cols-2 gap-3 sm:gap-4 mt-5"
+                : "space-y-3 mt-5"
+            }
+            role="radiogroup"
+            aria-label={`Pilihan jawaban untuk soal ${questionIndex + 1}`}
+          >
+            {question.options.map((opt) => {
+              const isSelected = selectedAnswer === opt.id;
+              const isCorrect = previewWithKey && question.correctAnswer === opt.id;
 
-              {/* Option Text / Image / SVG */}
-              <div className="flex-1 pt-0.5 leading-snug space-y-2">
-                {opt.text && <div>{opt.text}</div>}
-                {opt.image && (
-                  <div className="p-1 bg-slate-50 rounded border border-slate-200 inline-block">
-                    <img
-                      src={opt.image}
-                      alt={`Opsi ${opt.id}`}
-                      className="max-h-28 w-auto rounded object-contain"
-                    />
-                  </div>
-                )}
-                {opt.svg && (
+              return (
+                <button
+                  key={opt.id}
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => onSelectAnswer(opt.id)}
+                  aria-label={opt.altText || `Pilihan ${opt.id}`}
+                  className={`w-full text-left rounded-xl border text-sm sm:text-base transition-all select-none cursor-pointer ${
+                    hasVisualOptions
+                      ? "flex flex-col items-center justify-center p-3 relative hover:shadow-xs"
+                      : "flex items-start space-x-3.5 p-3.5"
+                  } ${
+                    isCorrect
+                      ? "border-emerald-500 bg-emerald-50/80 text-emerald-950 font-bold ring-2 ring-emerald-500/40 shadow-xs"
+                      : isSelected
+                      ? "border-blue-700 bg-blue-50/80 text-blue-950 font-semibold ring-2 ring-blue-600/30 shadow-xs"
+                      : "border-slate-200 bg-white text-slate-800 hover:border-slate-300 hover:bg-slate-50/60"
+                  } ${disabled ? "opacity-75 cursor-not-allowed" : ""}`}
+                >
+                  {/* Option Letter Tag */}
+                  <span
+                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-bold transition-colors ${
+                      hasVisualOptions ? "absolute top-2 left-2" : ""
+                    } ${
+                      isCorrect
+                        ? "bg-emerald-600 text-white"
+                        : isSelected
+                        ? "bg-blue-800 text-white"
+                        : "bg-slate-100 text-slate-700 border border-slate-200"
+                    }`}
+                  >
+                    {opt.id}
+                  </span>
+
+                  {/* Option Text / Image / SVG */}
                   <div
-                    className="mt-1"
-                    dangerouslySetInnerHTML={{ __html: opt.svg }}
-                  />
-                )}
-              </div>
+                    className={
+                      hasVisualOptions
+                        ? "w-full flex flex-col items-center justify-center pt-5 pb-1"
+                        : "flex-1 pt-0.5 leading-snug space-y-2"
+                    }
+                  >
+                    {opt.text && (
+                      <div className={hasVisualOptions ? "text-xs text-center font-medium mt-1" : ""}>
+                        {opt.text}
+                      </div>
+                    )}
+                    {opt.image && (
+                      <div className="p-1 bg-slate-50 rounded border border-slate-200 inline-block">
+                        <img
+                          src={opt.image}
+                          alt={opt.altText || `Opsi ${opt.id}`}
+                          className="max-h-24 sm:max-h-28 w-auto rounded object-contain"
+                        />
+                      </div>
+                    )}
+                    {opt.svg && (
+                      <div
+                        className="flex items-center justify-center w-full max-w-[140px] aspect-square"
+                        dangerouslySetInnerHTML={{ __html: opt.svg }}
+                      />
+                    )}
+                  </div>
 
-              {isCorrect && (
-                <span className="shrink-0 text-xs font-bold bg-emerald-600 text-white px-2 py-0.5 rounded-full flex items-center">
-                  <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
-                  Kunci Benar
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
+                  {isCorrect && (
+                    <span
+                      className={`text-xs font-bold bg-emerald-600 text-white px-2 py-0.5 rounded-full flex items-center ${
+                        hasVisualOptions ? "absolute top-2 right-2" : "shrink-0 ml-2"
+                      }`}
+                    >
+                      <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
+                      Kunci
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        );
+      })()}
 
       {/* Answer Key & Explanation Box (in preview or review mode) */}
-      {(previewWithKey || showExplanation) && question.explanation && (
+      {(previewWithKey || showExplanation) && (question.explanation || question.rule) && (
         <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50/60 p-4 space-y-3">
           <div className="flex items-center space-x-2 text-emerald-900 font-bold text-xs">
             <Info className="h-4 w-4 text-emerald-700" />
             <span>Kunci Jawaban & Penjelasan Resmi:</span>
           </div>
 
-          <p className="text-xs text-emerald-950 leading-relaxed">
-            {question.explanation}
-          </p>
+          {question.rule && (
+            <div className="text-xs text-emerald-950">
+              <strong>Aturan Geometri:</strong> {question.rule}
+            </div>
+          )}
+
+          {question.explanation && (
+            <p className="text-xs text-emerald-950 leading-relaxed">
+              {question.explanation}
+            </p>
+          )}
 
           {question.solvingStrategy && (
             <div className="pt-2 border-t border-emerald-200/70 text-[11px] text-emerald-900 flex items-start space-x-1.5">

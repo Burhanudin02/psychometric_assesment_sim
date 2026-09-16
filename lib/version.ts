@@ -15,3 +15,4 @@ export function getVersionInfo() {
     name: APP_NAME,
   };
 }
+

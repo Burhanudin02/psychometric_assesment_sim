@@ -99,6 +99,20 @@ export async function getActiveSessionState(sessionId: string) {
 
   if (!session) return null;
 
+  if (session.status === SessionStatus.INTEGRITY_TERMINATED) {
+    return {
+      session,
+      isTerminated: true,
+      terminationReason: session.terminationReason,
+      isCompleted: false,
+      currentModule: null,
+      questions: [],
+      savedAnswers: {},
+      remainingMs: 0,
+      serverTime: new Date().toISOString(),
+    };
+  }
+
   if (session.status === SessionStatus.COMPLETED) {
     return {
       session,

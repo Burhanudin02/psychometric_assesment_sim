@@ -29,6 +29,7 @@ export async function getAllQuestions(includeNonActive = false): Promise<Questio
         imagePosition: q.imagePosition as any,
         options: q.options as any,
         correctAnswer: q.correctAnswer,
+        rule: (q as any).rule || (q.metadata as any)?.rule || undefined,
         explanation: q.explanation,
         solvingStrategy: q.solvingStrategy,
         tags: q.tags,
@@ -48,7 +49,12 @@ export async function getAllQuestions(includeNonActive = false): Promise<Questio
     console.warn("Falling back to local seedQuestions.json:", err);
   }
 
-  return (seedData as any[]).map((q) => ({
+  const list = seedData as any[];
+  const filtered = includeNonActive
+    ? list
+    : list.filter((q) => q.active !== false && q.qualityStatus !== "DEPRECATED");
+
+  return filtered.map((q) => ({
     ...q,
     qualityStatus: q.qualityStatus || "ACTIVE",
   })) as QuestionItem[];
@@ -73,6 +79,7 @@ export async function getQuestionById(id: string): Promise<QuestionItem | null> 
         imagePosition: dbQ.imagePosition as any,
         options: dbQ.options as any,
         correctAnswer: dbQ.correctAnswer,
+        rule: (dbQ as any).rule || (dbQ.metadata as any)?.rule || undefined,
         explanation: dbQ.explanation,
         solvingStrategy: dbQ.solvingStrategy,
         tags: dbQ.tags,
@@ -100,10 +107,22 @@ export async function getQuestionsForModule(moduleNumber: number, count?: number
   const config = getModuleConfig(moduleNumber);
   const targetCount = count ?? (config?.defaultItemCount || 8);
   const domain = config?.domain || "NUMERICAL_REASONING";
+  const subtopic = config?.subtopic;
 
   // Only ACTIVE questions are served to test candidates
   const all = await getAllQuestions(false);
   let filtered = all.filter((q) => q.domain === domain);
+
+  if (subtopic) {
+    const subFiltered = filtered.filter((q) => q.subtopic === subtopic);
+    if (subFiltered.length >= targetCount) {
+      filtered = subFiltered;
+    } else if (subFiltered.length > 0) {
+      // Prioritize subtopic items, then top up with other items in domain
+      const remaining = filtered.filter((q) => q.subtopic !== subtopic);
+      filtered = [...subFiltered, ...remaining];
+    }
+  }
 
   if (filtered.length === 0) {
     filtered = all;
