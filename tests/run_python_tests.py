@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-Automated Python Verification Test Suite for Cognitive Assessment Simulator v0.2.0-beta.1
+Automated Python Verification Test Suite for Cognitive Assessment Simulator v0.1.0-beta
 Validates:
 1. Question bank integrity (160+ original items)
 2. 21-module curriculum blueprint
 3. Scoring, pacing, and median calculations
 4. Speed vs. Accuracy 4-quadrant evaluation
 5. Server timer expiry and grace window logic
-6. Visible SemVer Versioning & Beta metadata (v0.2.0-beta.1)
+6. Visible SemVer Versioning & Beta metadata (v0.1.0-beta)
 7. Question Quality Status & Answer-Key Transparency Validation
 8. Question Reporting Thresholds & Auto-Flagging (>= 3 reports -> REVIEW_REQUIRED)
 9. Duplicate Report Prevention Logic
@@ -134,7 +134,7 @@ def test_semver_versioning():
     with open("package.json", "r", encoding="utf-8") as f:
         pkg = json.load(f)
 
-    expected_version = "0.2.0-beta.1"
+    expected_version = "0.1.0-beta"
     assert pkg["version"] == expected_version, f"Expected {expected_version}, got {pkg['version']}"
 
     with open("lib/version.ts", "r", encoding="utf-8") as f:

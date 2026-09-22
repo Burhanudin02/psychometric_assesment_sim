@@ -1,6 +1,6 @@
 {
   "name": "cognitive-assessment-simulator",
-  "version": "0.2.0-beta.1",
+  "version": "0.1.0-beta",
   "private": true,
   "description": "Production-quality containerized training simulator for Part 1 of the Cognitive / Psychometrics Online Assessment.",
   "scripts": {

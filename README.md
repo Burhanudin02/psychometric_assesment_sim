@@ -1,9 +1,9 @@
 # Cognitive Assessment Simulator
 
 > **Independent Training Simulator for Speeded Psychometric Batteries**
-> *Reproducing the structure and time pressure of Part 1 Cognitive Assessments*
+
 >
-> **Release Version**: `v0.2.0-beta.1` · [![Version](https://img.shields.io/badge/version-v0.2.0--beta.1-blue.svg)](lib/version.ts) [![Beta](https://img.shields.io/badge/status-beta-amber.svg)](components/ui/BetaBadge.tsx) [![Tests](https://img.shields.io/badge/tests-11%2F11%20passing-brightgreen.svg)](tests/run_python_tests.py)
+> **Release Version**: [![Version](https://img.shields.io/badge/version-v0.2.0--beta.1-blue.svg)](lib/version.ts)
 
 ---
 
