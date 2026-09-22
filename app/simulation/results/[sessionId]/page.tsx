@@ -95,9 +95,9 @@ export default function SimulationResultsPage() {
         {/* Dual Core Visualizations: Quadrant & Radar */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <SpeedAccuracyQuadrant
-            accuracy={metrics.accuracy}
-            medianResponseTimeMs={metrics.medianResponseTimeMs}
-            userCategory={metrics.speedAccuracyCategory}
+            overallAccuracy={metrics.accuracy}
+            overallMedianSec={metrics.medianResponseTimeMs / 1000}
+            overallCategory={metrics.speedAccuracyCategory}
             domainScores={metrics.domainScores}
           />
 
@@ -106,7 +106,7 @@ export default function SimulationResultsPage() {
 
         {/* Error Taxonomy & Training Advisor Recommendations */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <ErrorTaxonomyList errorBreakdown={errorTaxonomy} />
+          <ErrorTaxonomyList errors={errorTaxonomy || []} />
           <RecommendationCards recommendations={recommendations} />
         </div>
 

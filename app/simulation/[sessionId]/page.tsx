@@ -111,10 +111,10 @@ export default function ActiveSimulationPage() {
 
       {/* 2. Top Navigation & Timer Bar */}
       <AssessmentHeader
-        currentModule={currentModuleNum}
+        currentModuleNum={currentModuleNum}
         totalModules={totalModules}
         moduleTitle={moduleTitle}
-        remainingTimeFormatted={formattedTime}
+        formattedTime={formattedTime}
         alertLevel={alertLevel}
       />
 

@@ -101,7 +101,7 @@ export function SimulationModuleView({
         {/* Right Sidebar: 21 Modules Navigation Grid */}
         <div className="lg:col-span-1 sticky top-20">
           <ModuleProgressSidebar
-            currentModule={currentModuleNum}
+            currentModuleNum={currentModuleNum}
             totalModules={totalModules}
           />
         </div>
