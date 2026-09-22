@@ -9,7 +9,7 @@
 
 ## 1. Project Overview
 
-The **Cognitive Assessment Simulator** is a production-quality, containerized web platform architected to train candidates for high-speed psychometric evaluations (specifically inspired by Part 1 of the ParagonCorp Online Assessment).
+The **Cognitive Assessment Simulator** is a production-quality, containerized web platform architected to train candidates for high-speed psychometric evaluations and standard speeded corporate cognitive batteries.
 
 The platform trains candidates to maintain accuracy, focus, and visual discrimination under extreme time limits (~60 seconds per module) across rapidly changing cognitive domains.
 
@@ -30,8 +30,8 @@ The platform provides deliberate practice on:
 
 > [!IMPORTANT]
 > **Independent Simulator — No Official Affiliation**
-> - This application is an **independent educational training simulator** and is **NOT** an official assessment of PT Paragon Technology and Innovation.
-> - This repository contains **ZERO** proprietary Paragon questions, zero leaked or scraped question banks, and zero proprietary graphics, logos, or commercial assets.
+> - This application is an **independent educational training simulator** and is **NOT** affiliated with, endorsed by, or an official assessment of any specific business entity, corporate institution, or testing organization.
+> - This repository contains **ZERO** proprietary questions, zero leaked or scraped question banks, and zero proprietary graphics, logos, or commercial assets.
 > - All questions, diagrams, SVG visualizations, procedural generators, and code are **100% original**.
 > - The application outputs **objective training performance metrics**; it does not provide clinical psychological diagnoses, IQ scores, or employment guarantees.
 
@@ -73,7 +73,7 @@ Version `v0.2.0-beta.1` introduces comprehensive quality control, visual clarifi
 
 ## 5. Confirmed Assessment Characteristics (Source A)
 
-Drawn directly from the official participant manual (*Manual Guide Peserta Paragon.pdf*):
+Drawn from standard corporate speeded assessment specifications and participant guidelines:
 
 1. **Assessment Name**: "Psychometrics Online Assessment".
 2. **Assessment Structure**: Exactly **21 subtests** executed non-stop until the final completion page.

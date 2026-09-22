@@ -128,7 +128,7 @@ export default function HomePage() {
               Disclaimer Independensi & Hak Cipta:
             </p>
             <p className="text-amber-900/90 leading-relaxed">
-              Aplikasi ini adalah simulator persiapan edukasi independen dan <strong>BUKAN</strong> merupakan aplikasi resmi PT Paragon Technology and Innovation. Seluruh soal, visualisasi, dan grafik adalah <strong>100% orisinil</strong> yang direkonstruksi untuk melatih kecepatan berpikir dan adaptasi kognitif di bawah batas waktu ketat.
+              Aplikasi ini adalah simulator persiapan edukasi independen dan <strong>BUKAN</strong> merupakan aplikasi resmi dari entitas bisnis, institusi, atau penyelenggara asesmen mana pun. Seluruh soal, visualisasi, dan grafik adalah <strong>100% orisinil</strong> yang direkonstruksi untuk melatih kecepatan berpikir dan adaptasi kognitif di bawah batas waktu ketat.
             </p>
           </div>
         </div>

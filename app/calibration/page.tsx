@@ -102,7 +102,7 @@ export default function CalibrationPage() {
             <ShieldCheck className="h-5 w-5 text-blue-900 shrink-0 mt-0.5" />
             <div>
               <span className="font-bold">Disclaimer Diagnostik: </span>
-              Ini adalah diagnostik pelatihan mandiri untuk memetakan kekuatan relatif Anda, bukan merupakan skor asesmen resmi Paragon.
+              Ini adalah diagnostik pelatihan mandiri untuk memetakan kekuatan relatif Anda, bukan merupakan skor asesmen resmi dari instansi atau institusi mana pun.
             </div>
           </div>
 
