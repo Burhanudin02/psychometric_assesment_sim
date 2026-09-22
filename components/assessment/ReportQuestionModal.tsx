@@ -5,7 +5,7 @@ import { Flag, X, AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface ReportQuestionModalProps {
-  isOpen: boolean;
+  isOpen?: boolean;
   onClose: () => void;
   questionId: string;
   questionVersion?: number;
@@ -52,7 +52,7 @@ const REPORT_REASONS = [
 ];
 
 export function ReportQuestionModal({
-  isOpen,
+  isOpen = true,
   onClose,
   questionId,
   questionVersion = 1,

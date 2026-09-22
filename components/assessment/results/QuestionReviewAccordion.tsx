@@ -294,6 +294,7 @@ export function QuestionReviewAccordion({
       {/* Question Report Modal */}
       {reportingQuestion && (
         <ReportQuestionModal
+          isOpen={true}
           questionId={reportingQuestion.id}
           questionVersion={reportingQuestion.version}
           sessionId={sessionId}
