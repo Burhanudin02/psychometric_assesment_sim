@@ -15,6 +15,7 @@ interface SimulationModuleViewProps {
   isSubmitting: boolean;
   onSelectAnswer: (questionId: string, optionId: string) => void;
   onSubmitModule: () => void;
+  sessionId?: string;
 }
 
 export function SimulationModuleView({
@@ -27,6 +28,7 @@ export function SimulationModuleView({
   isSubmitting,
   onSelectAnswer,
   onSubmitModule,
+  sessionId,
 }: SimulationModuleViewProps) {
   const isFinalModule = currentModuleNum === totalModules;
 
@@ -52,10 +54,12 @@ export function SimulationModuleView({
               <QuestionRenderer
                 key={q.id}
                 question={q}
-                questionNumber={idx + 1}
-                selectedOptionId={selectedAnswers[q.id] || null}
-                onSelectOption={(optId) => onSelectAnswer(q.id, optId)}
-                showFeedback={false}
+                questionIndex={idx}
+                totalQuestionsInModule={questions.length}
+                selectedAnswer={selectedAnswers[q.id] || null}
+                onSelectAnswer={(optId) => onSelectAnswer(q.id, optId)}
+                disabled={isSubmitting}
+                sessionId={sessionId}
               />
             ))}
           </div>
@@ -105,3 +109,4 @@ export function SimulationModuleView({
     </main>
   );
 }
+

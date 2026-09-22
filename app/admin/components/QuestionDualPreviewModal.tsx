@@ -88,10 +88,12 @@ export function QuestionDualPreviewModal({
         <div className="p-6 overflow-y-auto space-y-4 flex-1">
           <QuestionRenderer
             question={question}
-            questionNumber={1}
-            selectedOptionId={previewSelectedAnswer}
-            onSelectOption={(optId) => setPreviewSelectedAnswer(optId)}
-            showFeedback={previewMode === "key"}
+            questionIndex={0}
+            totalQuestionsInModule={1}
+            selectedAnswer={previewSelectedAnswer}
+            onSelectAnswer={(optId) => setPreviewSelectedAnswer(optId)}
+            previewWithKey={previewMode === "key"}
+            showExplanation={previewMode === "key"}
           />
         </div>
       </div>

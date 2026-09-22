@@ -1,5 +1,5 @@
 import { QuestionType } from "@prisma/client";
-import { QuestionItem } from "../types";
+import { QuestionItem } from "@/features/questions/types";
 import { IGeneratorRegistry, IProceduralQuestionGenerator } from "./types";
 
 /**
@@ -36,3 +36,4 @@ export class GeneratorRegistry implements IGeneratorRegistry {
 }
 
 export const defaultGeneratorRegistry = new GeneratorRegistry();
+

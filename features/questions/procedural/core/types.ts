@@ -1,4 +1,4 @@
-import { QuestionItem } from "../types";
+import { QuestionItem } from "@/features/questions/types";
 import { QuestionType } from "@prisma/client";
 
 /**
@@ -23,3 +23,4 @@ export interface IGeneratorRegistry {
   generate(questionType: QuestionType, seed?: number): QuestionItem;
   getAllGenerators(): IProceduralQuestionGenerator[];
 }
+

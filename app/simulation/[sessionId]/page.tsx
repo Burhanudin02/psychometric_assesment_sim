@@ -139,6 +139,7 @@ export default function ActiveSimulationPage() {
         isSubmitting={isSubmitting}
         onSelectAnswer={selectAnswer}
         onSubmitModule={() => submitModule(false)}
+        sessionId={sessionId}
       />
     </div>
   );
