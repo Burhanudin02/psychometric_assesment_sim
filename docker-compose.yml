@@ -1,0 +1,42 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: cas_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+      POSTGRES_DB: cognitive_assessment_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d cognitive_assessment_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cas_web
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgrespassword@db:5432/cognitive_assessment_db?schema=public
+      - NODE_ENV=production
+      - NEXT_TELEMETRY_DISABLED=1
+      - AUTH_SECRET=cas-production-fallback-secret-key-2026-secure
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["sh", "./scripts/docker-entrypoint.sh"]
+    volumes:
+      - question_uploads:/app/public/uploads/questions
+
+volumes:
+  postgres_data:
+  question_uploads:

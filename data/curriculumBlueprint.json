@@ -1,0 +1,233 @@
+[
+  {
+    "moduleNumber": 1,
+    "title": "01 — Numerical Speed",
+    "domain": "SPEED_ACCURACY",
+    "subtopic": "rapid_arithmetic",
+    "timeLimitSeconds": 60,
+    "targetPaceSeconds": 5.0,
+    "defaultItemCount": 12,
+    "instructions": "Kerjakan soal perhitungan cepat berikut seakurat dan secepat mungkin. Gulir ke bawah (scroll) untuk melihat seluruh soal dalam modul ini.",
+    "cognitiveFocus": "Initial mental activation, basic arithmetic fluency under strict time pressure."
+  },
+  {
+    "moduleNumber": 2,
+    "title": "02 — Number Series",
+    "domain": "NUMBER_SERIES",
+    "subtopic": "arithmetic_sequence",
+    "timeLimitSeconds": 60,
+    "targetPaceSeconds": 10.0,
+    "defaultItemCount": 6,
+    "instructions": "Temukan pola kelanjutan deret angka berikut dan pilih angka pengganti tanda tanya (?).",
+    "cognitiveFocus": "Inductive reasoning, recognition of linear and delta differences."
+  },
+  {
+    "moduleNumber": 3,
+    "title": "03 — Verbal Analogy",
+    "domain": "VERBAL_REASONING",
+    "subtopic": "verbal_analogy",
+    "timeLimitSeconds": 60,
+    "targetPaceSeconds": 7.5,
+    "defaultItemCount": 8,
+    "instructions": "Pilihlah pasangan kata yang memiliki relasi analogi yang setara dengan pasangan kata pada soal.",
+    "cognitiveFocus": "Relational vocabulary abstraction, semantic symmetry."
+  },
+  {
+    "moduleNumber": 4,
+    "title": "04 — Abstract Pattern",
+    "domain": "ABSTRACT_REASONING",
+    "subtopic": "visual_sequence",
+    "timeLimitSeconds": 60,
+    "targetPaceSeconds": 10.0,
+    "defaultItemCount": 6,
+    "instructions": "Perhatikan pola perubahan gambar dari kiri ke kanan, lalu pilihlah gambar berikutnya yang logis.",
+    "cognitiveFocus": "Visuospatial working memory, invariant transformation extraction."
+  },
+  {
+    "moduleNumber": 5,
+    "title": "05 — Logical Deduction",
+    "domain": "LOGICAL_REASONING",
+    "subtopic": "deduction",
+    "timeLimitSeconds": 60,
+    "targetPaceSeconds": 12.0,
+    "defaultItemCount": 5,
+    "instructions": "Berdasarkan pernyataan premis yang diberikan, pilihlah kesimpulan yang mutlak benar (must be true).",
+    "cognitiveFocus": "Deductive validity without importing external assumptions."
+  },
+  {
+    "moduleNumber": 6,
+    "title": "06 — Spatial Reasoning",
+    "domain": "SPATIAL_REASONING",
+    "subtopic": "mental_rotation",
+    "timeLimitSeconds": 60,
+    "targetPaceSeconds": 12.0,
+    "defaultItemCount": 5,
+    "instructions": "Pilihlah gambar yang merupakan hasil rotasi tepat dari objek acuan (bukan cerminan).",
+    "cognitiveFocus": "3D mental rotation vs 2D reflection discrimination."
+  },
+  {
+    "moduleNumber": 7,
+    "title": "07 — Attention Scan",
+    "domain": "ATTENTION_CONCENTRATION",
+    "subtopic": "visual_scanning",
+    "timeLimitSeconds": 60,
+    "targetPaceSeconds": 6.0,
+    "defaultItemCount": 10,
+    "instructions": "Temukan dan hitung kemunculan simbol atau karakter target di antara karakter pengalih.",
+    "cognitiveFocus": "High-speed visual search, selective attention vigilance."
+  },
+  {
+    "moduleNumber": 8,
+    "title": "08 — Numerical Comparison",
+    "domain": "NUMERICAL_REASONING",
+    "subtopic": "comparison",
+    "timeLimitSeconds": 60,
+    "targetPaceSeconds": 7.5,
+    "defaultItemCount": 8,
+    "instructions": "Bandingkan Nilai A dan Nilai B, kemudian tentukan hubungan kuantitatif keduanya.",
+    "cognitiveFocus": "Rapid fraction, exponent, and arithmetic magnitude comparison."
+  },
+  {
+    "moduleNumber": 9,
+    "title": "09 — Verbal Classification",
+    "domain": "VERBAL_REASONING",
+    "subtopic": "classification",
+    "timeLimitSeconds": 60,
+    "targetPaceSeconds": 7.5,
+    "defaultItemCount": 8,
+    "instructions": "Pilihlah satu kata yang tidak termasuk dalam kelompok kategori yang sama dengan kata lainnya.",
+    "cognitiveFocus": "Category taxonomy discrimination, identifying conceptual outliers."
+  },
+  {
+    "moduleNumber": 10,
+    "title": "10 — Pattern Transformation",
+    "domain": "ABSTRACT_REASONING",
+    "subtopic": "shape_transformation",
+    "timeLimitSeconds": 60,
+    "targetPaceSeconds": 10.0,
+    "defaultItemCount": 6,
+    "instructions": "Identifikasi aturan transformasi bentuk 2-tahap (inversi, translasi, rotasi) pada gambar.",
+    "cognitiveFocus": "Multi-variable geometric transformation tracking."
+  },
+  {
+    "moduleNumber": 11,
+    "title": "11 — Logical Sequence",
+    "domain": "LOGICAL_REASONING",
+    "subtopic": "ordering",
+    "timeLimitSeconds": 60,
+    "targetPaceSeconds": 12.0,
+    "defaultItemCount": 5,
+    "instructions": "Selesaikan urutan posisi atau peringkat berdasarkan serangkaian kondisi urutan yang diberikan.",
+    "cognitiveFocus": "Constraint satisfaction, linear arrangement mapping."
+  },
+  {
+    "moduleNumber": 12,
+    "title": "12 — Mental Rotation",
+    "domain": "SPATIAL_REASONING",
+    "subtopic": "cube_reasoning",
+    "timeLimitSeconds": 60,
+    "targetPaceSeconds": 12.0,
+    "defaultItemCount": 5,
+    "instructions": "Tentukan kubus 3D mana yang terbentuk secara benar dari jaring-jaring 2D yang dibentangkan.",
+    "cognitiveFocus": "Surface adjacency mapping, 2D to 3D folding translation."
+  },
+  {
+    "moduleNumber": 13,
+    "title": "13 — Rapid Arithmetic",
+    "domain": "SPEED_ACCURACY",
+    "subtopic": "rapid_arithmetic",
+    "timeLimitSeconds": 60,
+    "targetPaceSeconds": 5.0,
+    "defaultItemCount": 12,
+    "instructions": "Selesaikan perhitungan aritmatika 2-digit dan pecahan dengan cepat dan teliti.",
+    "cognitiveFocus": "Mid-test cognitive endurance, arithmetic recovery under fatigue."
+  },
+  {
+    "moduleNumber": 14,
+    "title": "14 — Visual Odd-One-Out",
+    "domain": "ABSTRACT_REASONING",
+    "subtopic": "odd_one_out",
+    "timeLimitSeconds": 60,
+    "targetPaceSeconds": 10.0,
+    "defaultItemCount": 6,
+    "instructions": "Pilihlah satu figur yang tidak mematuhi aturan geometris atau simetri kelompoknya.",
+    "cognitiveFocus": "Rule invariance deduction, anomaly detection."
+  },
+  {
+    "moduleNumber": 15,
+    "title": "15 — Ratio & Proportion",
+    "domain": "NUMERICAL_REASONING",
+    "subtopic": "ratios",
+    "timeLimitSeconds": 60,
+    "targetPaceSeconds": 12.0,
+    "defaultItemCount": 5,
+    "instructions": "Selesaikan soal perbandingan, persentase keuntungan, dan skala proporsional.",
+    "cognitiveFocus": "Proportional reasoning, practical business mathematics."
+  },
+  {
+    "moduleNumber": 16,
+    "title": "16 — Syllogism",
+    "domain": "LOGICAL_REASONING",
+    "subtopic": "syllogism",
+    "timeLimitSeconds": 60,
+    "targetPaceSeconds": 12.0,
+    "defaultItemCount": 5,
+    "instructions": "Tentukan kesimpulan logis yang sah dari dua premis kategoris (Semua / Sebagian / Tidak Ada).",
+    "cognitiveFocus": "Formal syllogistic deduction, immune to real-world factual bias."
+  },
+  {
+    "moduleNumber": 17,
+    "title": "17 — Symbol Matching",
+    "domain": "ATTENTION_CONCENTRATION",
+    "subtopic": "symbol_matching",
+    "timeLimitSeconds": 60,
+    "targetPaceSeconds": 5.0,
+    "defaultItemCount": 12,
+    "instructions": "Bandingkan dua untaian simbol atau angka: tentukan apakah keduanya SAMA (S) atau BEDA (B).",
+    "cognitiveFocus": "Perceptual speed, rapid verification, character comparison."
+  },
+  {
+    "moduleNumber": 18,
+    "title": "18 — Mixed Numerical Logic",
+    "domain": "NUMERICAL_REASONING",
+    "subtopic": "arithmetic",
+    "timeLimitSeconds": 60,
+    "targetPaceSeconds": 10.0,
+    "defaultItemCount": 6,
+    "instructions": "Isi angka atau tanda operasi yang hilang untuk membuat persamaan matematika bernilai benar.",
+    "cognitiveFocus": "Numerical constraint solving under increasing cognitive load."
+  },
+  {
+    "moduleNumber": 19,
+    "title": "19 — Abstract Matrix",
+    "domain": "ABSTRACT_REASONING",
+    "subtopic": "matrix_pattern",
+    "timeLimitSeconds": 60,
+    "targetPaceSeconds": 15.0,
+    "defaultItemCount": 4,
+    "instructions": "Perhatikan matriks gambar 3x3 berikut, lalu tentukan gambar yang mengisi tanda tanya (?).",
+    "cognitiveFocus": "High-order multi-relational inductive reasoning (Raven-style logic)."
+  },
+  {
+    "moduleNumber": 20,
+    "title": "20 — Speed & Accuracy",
+    "domain": "SPEED_ACCURACY",
+    "subtopic": "comparison_time_limit",
+    "timeLimitSeconds": 60,
+    "targetPaceSeconds": 5.0,
+    "defaultItemCount": 12,
+    "instructions": "Verifikasi kebenaran pernyataan logika/aritmatika sederhana secara instan (BENAR / SALAH).",
+    "cognitiveFocus": "Sustained vigilance and inhibitory control near assessment completion."
+  },
+  {
+    "moduleNumber": 21,
+    "title": "21 — Mixed Cognitive Challenge",
+    "domain": "MULTI_DOMAIN",
+    "subtopic": "mixed_cognitive",
+    "timeLimitSeconds": 60,
+    "targetPaceSeconds": 10.0,
+    "defaultItemCount": 6,
+    "instructions": "Selesaikan rangkaian soal gabungan yang menguji fleksibilitas kognitif di tahap akhir tes.",
+    "cognitiveFocus": "Peak task-switching ability, combating accumulated test fatigue."
+  }
+]

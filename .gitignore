@@ -46,3 +46,10 @@ Manual Guide Peserta Paragon.pdf
 *paragon*.pdf
 *Paragon*
 *paragon*
+
+# Docker local artifacts
+.docker/
+
+# Release Notes (local only, excluded from git)
+RELEASE_NOTES.md
+RELEASE_NOTE*.md
