@@ -3,7 +3,7 @@
 > **Independent Training Simulator for Speeded Psychometric Batteries**
 
 >
-> **Release Version**: [![Version](https://img.shields.io/badge/version-v0.2.0--beta.1-blue.svg)](lib/version.ts)
+> **Release Version**: [![Version](https://img.shields.io/badge/version-v0.1.0--beta-blue.svg)](lib/version.ts)
 
 ---
 
@@ -37,9 +37,9 @@ The platform provides deliberate practice on:
 
 ---
 
-## 4. What's New in `v0.2.0-beta.1`
+## 4. What's New in `v0.1.0-beta`
 
-Version `v0.2.0-beta.1` introduces comprehensive quality control, visual clarification, and administrative tools:
+Version `v0.1.0-beta` introduces comprehensive quality control, visual clarification, and administrative tools:
 
 1. **Visible SemVer Versioning & Beta Tagging**:
    - Centralized version constant in `lib/version.ts` synchronized with `package.json`.
@@ -265,7 +265,7 @@ All 13 verification tests pass successfully:
 - Scoring & pacing formulas
 - Speed vs. Accuracy matrix (4 quadrants)
 - Timer grace window
-- SemVer versioning (`v0.2.0-beta.1`)
+- SemVer versioning (`v0.1.0-beta`)
 - Question quality status & answer-key validation
 - Reporting threshold & duplicate prevention
 - Question versioning & historical snapshots

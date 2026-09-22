@@ -12,7 +12,7 @@ function hashPassword(password: string): string {
 }
 
 async function main() {
-  console.log("Seeding database with Cognitive Assessment Simulator v0.2.0-beta.1 assets...");
+  console.log("Seeding database with Cognitive Assessment Simulator v0.1.0-beta assets...");
 
   // 1. Seed Administrator User
   const adminEmail = process.env.ADMIN_EMAIL || "admin@simulator.local";
